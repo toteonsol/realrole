@@ -78,9 +78,9 @@ export function HeroDemo() {
     <ValidatorHalo />
     <div className="card card-glow relative overflow-hidden p-6" aria-live="polite">
       <div className="flex items-center justify-between">
-        <p className="eyebrow">Live from the chain · {p.ats}</p>
+        <p className="eyebrow">Replay of a stored verdict · {p.ats}</p>
         <span className="mono flex items-center gap-1.5 text-[0.65rem] text-ink-3">
-          <span className="h-1.5 w-1.5 rounded-full bg-good pulse" /> real posting
+          <span className="h-1.5 w-1.5 rounded-full bg-good" /> real posting
         </span>
       </div>
       <p className="mt-4 text-sm font-bold uppercase tracking-wide text-ink-3">{companyName(p)}</p>
@@ -101,7 +101,7 @@ export function HeroDemo() {
               style={{ animationDelay: `${n * 0.12}s` }}
             />
           ))}
-          <span className="mono ml-2 text-xs text-ink-3">{phase === "stamp" ? "validators agreed" : "validators reading source…"}</span>
+          <span className="mono ml-2 text-xs text-ink-3">{phase === "stamp" ? "how validators ruled" : "replaying the audit…"}</span>
         </div>
         {phase === "stamp" && <span key={`${p.key}-s`}><VerdictBadge verdict={p.verdict} size="lg" /></span>}
       </div>

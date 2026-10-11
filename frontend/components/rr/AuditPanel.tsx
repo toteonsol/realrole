@@ -112,8 +112,21 @@ export function AuditPanel() {
 
       {existing.data && (
         <div className="mt-6 rise">
+          {!tx.stage && (
+            <p className="mb-3 rounded-xl border border-line-2 bg-sunken px-4 py-3 text-sm text-ink-2">
+              <strong className="text-ink">Already on the record.</strong> You&apos;re reading a verdict validators stored
+              earlier (free, no wallet). <strong className="text-ink">Re-audit</strong> runs a fresh check: your wallet signs a
+              transaction (about 0.0003 GEN) and validators re-read the posting from its source.
+            </p>
+          )}
           <PostingCard p={existing.data} featured />
         </div>
+      )}
+      {parsed && !existing.isLoading && !existing.data && !tx.stage && (
+        <p className="mt-4 rounded-xl border border-line-2 bg-sunken px-4 py-3 text-sm text-ink-2">
+          <strong className="text-ink">Not on the record yet.</strong> Running the audit asks your wallet to sign a transaction
+          (about 0.0003 GEN). Validators then fetch this posting from its source and settle a verdict in about a minute.
+        </p>
       )}
     </section>
   );
