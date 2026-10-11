@@ -11,8 +11,8 @@ Employers who mean it can bond GEN behind a Real Role Pledge. The contract issue
 Live on GenLayer Testnet Bradbury and Studionet, with real audits of Uniswap, Coinbase, Gemini, Ripple and Binance postings. Two Ripple postings in Illinois and California were found MISSING_RANGE. 36 direct-mode tests cover every verdict, prompt-injection sanitising, fail-closed source errors, validator rejection of tampered facts, and every pledge outcome with exact payouts.
 
 **Links to attach:**
-- GitHub repository: <add after push>
-- Live app: <add after deploy>
+- GitHub repository: https://github.com/toteonsol/realrole
+- Live app: https://realrole-one.vercel.app
 - Contract (Bradbury): https://explorer-bradbury.genlayer.com/address/0xB3b7F0B04ff28f19561FC6906965101120Fa980A
 - Contract (Studionet): https://explorer-studio.genlayer.com/address/0x6b5b9E20ec672d1D63AdbEF9d42B3F560bE6dB33
 - Demo video / X post: <optional, earns extra points>

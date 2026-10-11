@@ -2,6 +2,8 @@
 
 **Honest job postings, verified by GenLayer consensus.**
 
+**Live app:** https://realrole-one.vercel.app · **Contract (Bradbury):** [`0xB3b7…980A`](https://explorer-bradbury.genlayer.com/address/0xB3b7F0B04ff28f19561FC6906965101120Fa980A)
+
 RealRole puts public job postings on the record. Independent GenLayer validators read each posting straight from the employer's own hiring system, agree on the facts, and an Intelligent Contract stamps a pay-transparency verdict that no company, server or AI model can quietly change. Employers who mean it can bond GEN behind a **Real Role Pledge**: a promise that the posting keeps an honest pay range and does not linger as a ghost job.
 
 ## The problem
