@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRealRole, useStats, useTx } from "@/lib/hooks/useRealRole";
+import { usePostings, useRealRole, useStats, useTx } from "@/lib/hooks/useRealRole";
 import { parsePostingUrl } from "@/lib/realrole/format";
+import { COMPANIES, fetchBoard } from "@/lib/realrole/companies";
 import { PostingCard, TxProgress, VerdictBadge } from "./shared";
 
-const EXAMPLES = [
+/** Companies we pull fresh, not-yet-audited roles from for one-click live audits. */
+const FRESH_FROM = ["discord", "palantir", "okx", "robinhood", "polymarket", "anchorage"];
+
+const STORED_EXAMPLES = [
   { label: "Uniswap", sub: "Staff Backend Eng", url: "https://jobs.ashbyhq.com/uniswap/f1dab839-ecb6-4061-b475-b5d8cf264adb" },
   { label: "Ripple", sub: "Chicago, IL", url: "https://job-boards.greenhouse.io/ripple/jobs/8209410" },
   { label: "Gemini", sub: "New York", url: "https://job-boards.greenhouse.io/gemini/jobs/7951043" },
@@ -19,6 +23,33 @@ export function AuditPanel() {
   const contract = useRealRole();
   const tx = useTx();
   const stats = useStats();
+  const onRecord = usePostings();
+
+  // Oldest live role per company that is NOT on the record yet: clicking one goes straight to the wallet.
+  const fresh = useQuery({
+    queryKey: ["fresh-picks", (onRecord.data ?? []).length],
+    enabled: !!onRecord.data,
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      const recorded = new Set((onRecord.data ?? []).map((p) => p.key));
+      const picks = await Promise.all(
+        FRESH_FROM.map(async (board) => {
+          const c = COMPANIES.find((x) => x.board === board)!;
+          try {
+            const jobs = (await fetchBoard(c)).filter((j) => j.postedTs && !recorded.has(`${c.ats}:${c.board}:${j.id}`));
+            jobs.sort((a, b) => a.postedTs - b.postedTs);
+            const j = jobs[0];
+            if (!j) return null;
+            const days = Math.floor((Date.now() / 1000 - j.postedTs) / 86400);
+            return { label: c.name, sub: j.title, age: days, ats: c.ats, board: c.board, id: j.id, url: j.url };
+          } catch {
+            return null;
+          }
+        }),
+      );
+      return picks.filter(Boolean) as { label: string; sub: string; age: number; ats: string; board: string; id: string; url: string }[];
+    },
+  });
   const [input, setInput] = useState("");
   const parsed = parsePostingUrl(input);
   const ghCompanyPage = /gh_jid=/.test(input) && !parsed;
@@ -30,7 +61,7 @@ export function AuditPanel() {
   });
 
   useEffect(() => {
-    if (!tx.busy) tx.reset();
+    if (!tx.busy && tx.stage !== "estimating" && tx.stage !== "signing") tx.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input]);
 
@@ -94,28 +125,57 @@ export function AuditPanel() {
         </div>
 
         {!input && (
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex.url}
-                type="button"
-                onClick={() => setInput(ex.url)}
-                className="group rounded-xl border border-line bg-sunken px-3 py-2.5 text-left transition hover:border-brand"
-              >
-                <span className="block text-sm font-bold group-hover:text-brand">{ex.label}</span>
-                <span className="block text-xs text-ink-3">{ex.sub}</span>
-              </button>
-            ))}
+          <div className="mt-6">
+            <p className="text-xs font-bold uppercase tracking-wide text-brand">Run a live audit · one click, your wallet signs</p>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {fresh.isLoading || !fresh.data ? (
+                <p className="mono text-xs text-ink-3 sm:col-span-3">finding real roles that aren&apos;t on the record yet…</p>
+              ) : (
+                fresh.data.map((f) => (
+                  <button
+                    key={f.url}
+                    type="button"
+                    disabled={tx.busy}
+                    onClick={async () => {
+                      setInput(f.url);
+                      await tx.run("audit_posting", [f.ats, f.board, f.id]);
+                    }}
+                    className="group rounded-xl border border-brand/40 bg-sunken px-3 py-2.5 text-left transition hover:border-brand disabled:opacity-50"
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold group-hover:text-brand">{f.label}</span>
+                      <span className={`mono text-[0.65rem] ${f.age > 90 ? "text-warn" : "text-ink-3"}`}>{f.age > 90 ? "👻 " : ""}{f.age}d open</span>
+                    </span>
+                    <span className="block truncate text-xs text-ink-3">{f.sub}</span>
+                    <span className="mt-1 block text-[0.7rem] font-bold text-brand">Audit live →</span>
+                  </button>
+                ))
+              )}
+            </div>
+            <p className="mt-5 text-xs font-bold uppercase tracking-wide text-ink-3">Or look up a stored verdict · free, no wallet</p>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {STORED_EXAMPLES.map((ex) => (
+                <button
+                  key={ex.url}
+                  type="button"
+                  onClick={() => setInput(ex.url)}
+                  className="group rounded-xl border border-line bg-sunken px-3 py-2.5 text-left transition hover:border-ink-3"
+                >
+                  <span className="block text-sm font-bold">{ex.label}</span>
+                  <span className="block text-xs text-ink-3">{ex.sub}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
       <TxProgress tx={tx} />
 
-      {tx.stage === "accepted" && typeof tx.outcome?.returned === "string" && (
-        <div className="mt-6 flex flex-wrap items-center gap-4">
+      {tx.stage === "accepted" && (typeof tx.outcome?.returned === "string" || existing.data?.verdict) && (
+        <div className="rise mt-6 flex flex-wrap items-center gap-4">
           <span className="eyebrow">Consensus verdict</span>
-          <VerdictBadge verdict={tx.outcome.returned} size="lg" />
+          <VerdictBadge verdict={typeof tx.outcome?.returned === "string" ? tx.outcome.returned : existing.data!.verdict} size="lg" />
         </div>
       )}
 
