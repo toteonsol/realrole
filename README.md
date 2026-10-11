@@ -75,6 +75,35 @@ Real audits on the record (Bradbury and Studionet, each decided by validator con
 | Ripple · Customer Success Sr Manager (Greenhouse) | MISSING_RANGE | Posting is also attached to the San Francisco office |
 | Binance · Taipei engineer (Lever) | NO_RANGE_UNREGULATED + STALE | No listed rule applies in Taiwan |
 
+## Showcase on Bradbury
+
+**22 real postings** are on the record from 13 companies across web2 and web3. Some examples:
+
+| Company | Role | Verdict | What validators found |
+|---|---|---|---|
+| Palantir (Lever) | Forward Deployed Software Engineer | COMPLIANT + STALE | First posted about **12.7 years** ago; range only in the description text |
+| Stripe (Greenhouse) | Backend Engineer, Core Technology | MISSING_RANGE + STALE | No range; open about 2.3 years across IL/WA/CA |
+| Ramp (Ashby) | Channel Partner Manager | TOO_WIDE | **$14K–$214K** |
+| Figma (Greenhouse) | Software Engineer, AI Product | TOO_WIDE + STALE | $153K–$376K |
+| Notion (Ashby) | Forward Deployed Engineer | MISSING_RANGE + STALE | No range, San Francisco |
+| OpenAI (Ashby) | Researcher, Robustness & Safety | COMPLIANT + STALE | $380K–$500K, open about 3.4 years |
+| Anchorage (Lever) | Member of Technical Staff, Security | MISSING_RANGE + STALE | No range, US |
+| Crypto.com (Lever) | Risk Manager, Quantitative | TOO_WIDE + STALE | $100K–$230K |
+| Airbnb, Coinbase, Polymarket, Phantom | various | COMPLIANT | Published ranges |
+
+## Demo employer and live pledges
+
+`/demo/careers` on the app is a fictional employer ("Northwind Labs"), clearly labelled, with four schema.org JobPosting pages. Validators read them like any careers page:
+
+| Page | Purpose | On-chain state |
+|---|---|---|
+| Protocol Engineer | Pledge #1, to be **kept** (posting closed in time) | ACTIVE, deadline 2026-11-10 |
+| Developer Relations Lead | Pledge #2, to be **broken** (range removed) | ACTIVE, 1 registered applicant |
+| Data Analyst | No range in Illinois | MISSING_RANGE |
+| Senior Product Designer | $90K–$250K | TOO_WIDE |
+
+Each pledge was proven by placing its contract-issued code (`realrole-1-2d5cbf75`, `realrole-2-2d5cbf75`) in the posting before activation.
+
 ## Run it
 
 Requirements: Python 3.12+, Node 18+.
