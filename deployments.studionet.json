@@ -1,0 +1,8 @@
+{
+  "chain": "studionet",
+  "chainId": 61999,
+  "address": "0x6b5b9E20ec672d1D63AdbEF9d42B3F560bE6dB33",
+  "deployTx": "0xfe0846805afb7a2f0f05614ac25d7a8038ccad6b71e45515e8b0b1a2ca69047d",
+  "cooldown": 60,
+  "deployedAt": "2026-10-11T13:32:22.352Z"
+}
