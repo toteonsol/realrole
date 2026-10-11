@@ -170,9 +170,14 @@ export function readReceipt(receipt: any): Pick<TxOutcome, "ok" | "votes" | "ret
     };
   }
   const exec = receipt?.txExecutionResultName;
-  const status: string | undefined = receipt?.statusName;
+  // The SDK's wait call may return only a numeric status (13 = LEADER_TIMEOUT) without a name.
+  const status: string | undefined =
+    receipt?.statusName ?? ({ 12: "UNDETERMINED", 13: "LEADER_TIMEOUT", 14: "VALIDATORS_TIMEOUT" } as Record<number, string>)[Number(receipt?.status)];
   if (status === "LEADER_TIMEOUT" || status === "UNDETERMINED" || status === "VALIDATORS_TIMEOUT") {
     return { ok: false, votes: undefined, returned: undefined, error: `CONSENSUS_${status}` };
+  }
+  if (exec === "NOT_VOTED") {
+    return { ok: false, votes: undefined, returned: undefined, error: "CONSENSUS_LEADER_TIMEOUT" };
   }
   const ok = exec ? exec === "FINISHED_WITH_RETURN" : true;
   const names: string[] = receipt?.lastRound?.validatorVotesName ?? [];
