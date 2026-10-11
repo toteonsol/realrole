@@ -170,6 +170,10 @@ export function readReceipt(receipt: any): Pick<TxOutcome, "ok" | "votes" | "ret
     };
   }
   const exec = receipt?.txExecutionResultName;
+  const status: string | undefined = receipt?.statusName;
+  if (status === "LEADER_TIMEOUT" || status === "UNDETERMINED" || status === "VALIDATORS_TIMEOUT") {
+    return { ok: false, votes: undefined, returned: undefined, error: `CONSENSUS_${status}` };
+  }
   const ok = exec ? exec === "FINISHED_WITH_RETURN" : true;
   const names: string[] = receipt?.lastRound?.validatorVotesName ?? [];
   const votes = Object.fromEntries(names.map((v, i) => [String(i), v === "AGREE" ? "agree" : v === "TIMEOUT" ? "idle" : "disagree"]));

@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RealRoleContract, type TxOutcome, type TxStage } from "../contracts/RealRole";
-import { getContractAddress } from "../genlayer/client";
+import { getContractAddress, isOnGenLayerNetwork, switchToGenLayerNetwork } from "../genlayer/client";
 import { useWallet } from "../genlayer/wallet";
 
 export function useRealRole(): RealRoleContract | null {
@@ -77,17 +77,22 @@ export function useTx() {
   const { address, isConnected, connectWallet } = useWallet();
   const qc = useQueryClient();
   const [state, setState] = useState<TxState>({ stage: null });
+  const [last, setLast] = useState<{ functionName: string; args: unknown[]; value: bigint } | null>(null);
 
   const run = useCallback(
     async (functionName: string, args: unknown[], value: bigint = 0n): Promise<TxOutcome | null> => {
+      setLast({ functionName, args, value });
       if (!c) {
         setState({ stage: "failed", error: "Contract address is not configured." });
         return null;
       }
       try {
-        if (!isConnected || !address) await connectWallet();
+        // Connect first if needed, then bind the client to the address the wallet returned.
+        const account = isConnected && address ? address : await connectWallet();
+        if (!(await isOnGenLayerNetwork())) await switchToGenLayerNetwork();
+        const signer = account === address ? c : new RealRoleContract(getContractAddress() as `0x${string}`, account);
         setState({ stage: "estimating" });
-        const outcome = await c.write(
+        const outcome = await signer.write(
           functionName,
           args,
           (stage, hash) => setState((s) => ({ ...s, stage, hash: hash ?? s.hash })),
@@ -106,6 +111,7 @@ export function useTx() {
   );
 
   const reset = useCallback(() => setState({ stage: null }), []);
+  const retry = useCallback(() => (last ? run(last.functionName, last.args, last.value) : Promise.resolve(null)), [last, run]);
   const busy = state.stage === "estimating" || state.stage === "signing" || state.stage === "deciding";
-  return { ...state, run, reset, busy };
+  return { ...state, run, reset, retry, busy };
 }

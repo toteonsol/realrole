@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRealRole, useTx } from "@/lib/hooks/useRealRole";
+import { useRealRole, useStats, useTx } from "@/lib/hooks/useRealRole";
 import { parsePostingUrl } from "@/lib/realrole/format";
 import { PostingCard, TxProgress, VerdictBadge } from "./shared";
 
@@ -18,6 +18,7 @@ const SOURCES = ["Greenhouse", "Lever", "Ashby", "schema.org JobPosting"];
 export function AuditPanel() {
   const contract = useRealRole();
   const tx = useTx();
+  const stats = useStats();
   const [input, setInput] = useState("");
   const parsed = parsePostingUrl(input);
   const ghCompanyPage = /gh_jid=/.test(input) && !parsed;
@@ -32,6 +33,14 @@ export function AuditPanel() {
     if (!tx.busy) tx.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input]);
+
+  const cooldown = stats.data?.cooldown_s ?? 0;
+  const reauditAt = existing.data ? existing.data.last_audit_ts + cooldown : 0;
+  const now = Math.floor(Date.now() / 1000);
+  const coolingDown = !!existing.data && now < reauditAt;
+  const waitText = coolingDown
+    ? (reauditAt - now >= 3600 ? `${Math.ceil((reauditAt - now) / 3600)}h` : `${Math.ceil((reauditAt - now) / 60)}m`)
+    : "";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +73,8 @@ export function AuditPanel() {
               spellCheck={false}
             />
           </div>
-          <button className="btn btn-primary px-6 py-3.5 text-base" disabled={!parsed || tx.busy} type="submit">
-            {tx.busy ? "Validators working…" : existing.data ? "Re-audit →" : "Run the audit →"}
+          <button className="btn btn-primary px-6 py-3.5 text-base" disabled={!parsed || tx.busy || coolingDown} type="submit">
+            {tx.busy ? "Validators working…" : coolingDown ? `Re-audit in ${waitText}` : existing.data ? "Re-audit →" : "Run the audit →"}
           </button>
         </form>
 
@@ -115,8 +124,11 @@ export function AuditPanel() {
           {!tx.stage && (
             <p className="mb-3 rounded-xl border border-line-2 bg-sunken px-4 py-3 text-sm text-ink-2">
               <strong className="text-ink">Already on the record.</strong> You&apos;re reading a verdict validators stored
-              earlier (free, no wallet). <strong className="text-ink">Re-audit</strong> runs a fresh check: your wallet signs a
-              transaction (about 0.0003 GEN) and validators re-read the posting from its source.
+              earlier (free, no wallet). {coolingDown ? (
+                <>A fresh re-audit opens in {waitText} (each posting can be re-checked every {Math.round(cooldown / 3600)}h). Pick a new job from <strong className="text-ink">Browse live jobs</strong> to see a live audit now.</>
+              ) : (
+                <><strong className="text-ink">Re-audit</strong> runs a fresh check: your wallet signs a transaction (about 0.0003 GEN) and validators re-read the posting from its source.</>
+              )}
             </p>
           )}
           <PostingCard p={existing.data} featured />

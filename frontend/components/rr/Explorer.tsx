@@ -138,6 +138,15 @@ export function Explorer() {
         )}
       </div>
       {active && <TxProgress tx={tx} />}
+      {active && tx.stage === "accepted" && recorded.get(`${company.ats}:${company.board}:${active}`) && (
+        <div className="rise mt-5 flex flex-wrap items-center gap-4">
+          <span className="eyebrow">Consensus verdict</span>
+          <VerdictBadge verdict={recorded.get(`${company.ats}:${company.board}:${active}`)!} size="lg" />
+          <span className="text-sm text-ink-2">
+            {(board.data ?? []).find((j) => j.id === active)?.title}: now on the record for anyone to verify.
+          </span>
+        </div>
+      )}
     </section>
   );
 }

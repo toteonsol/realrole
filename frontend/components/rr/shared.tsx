@@ -74,7 +74,7 @@ const STAGES = [
 ];
 
 /** The consensus view: validator nodes orbit the posting while it is scanned, then light up as they agree. */
-export function TxProgress({ tx }: { tx: TxState }) {
+export function TxProgress({ tx }: { tx: TxState & { retry?: () => unknown } }) {
   if (!tx.stage) return null;
   const current = tx.stage === "failed" ? -1 : STAGES.findIndex((s) => s.key === tx.stage);
   const voteList = tx.outcome?.votes ? Object.values(tx.outcome.votes) : [];
@@ -139,6 +139,9 @@ export function TxProgress({ tx }: { tx: TxState }) {
           </p>
           {tx.hash && <p className="mt-2 text-xs text-ink-3">tx <TxLink hash={tx.hash} /></p>}
           {tx.stage === "failed" && <p className="mt-2 text-sm font-medium text-bad">{prettyError(tx.error)}</p>}
+          {tx.stage === "failed" && tx.retry && /CONSENSUS_|SOURCE_UNAVAILABLE/.test(tx.error ?? "") && (
+            <button className="btn btn-primary mt-3 !py-2 text-sm" onClick={() => tx.retry?.()}>Try again →</button>
+          )}
         </div>
       </div>
     </div>
@@ -146,6 +149,9 @@ export function TxProgress({ tx }: { tx: TxState }) {
 }
 
 const ERRORS: Record<string, string> = {
+  CONSENSUS_LEADER_TIMEOUT: "The testnet's lead validator timed out before finishing, so nothing was recorded. This happens occasionally on Bradbury; trying again usually works.",
+  CONSENSUS_VALIDATORS_TIMEOUT: "Validators timed out before agreeing, so nothing was recorded. Try again.",
+  CONSENSUS_UNDETERMINED: "Validators couldn't reach agreement, so nothing was recorded. Try again in a moment.",
   RECENTLY_AUDITED: "This posting was audited moments ago. Try again after the cooldown.",
   RECENTLY_CHECKED: "This pledge was checked moments ago. Try again after the cooldown.",
   UNSUPPORTED_SOURCE: "That source is not supported yet.",
