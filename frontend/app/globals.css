@@ -305,3 +305,17 @@ body {
   }
   .marquee-track { animation: none; }
 }
+
+/* ---------- illustration motion ---------- */
+@keyframes ghost-float {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-12px) rotate(1.5deg); }
+}
+.ghost-float { animation: ghost-float 5s ease-in-out infinite; transform-origin: 160px 160px; }
+@keyframes ghost-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.45; }
+  50% { transform: scaleX(0.82); opacity: 0.25; }
+}
+.ghost-shadow { animation: ghost-shadow 5s ease-in-out infinite; transform-origin: 160px 318px; }
+@keyframes flow { to { stroke-dashoffset: -40; } }
+.flow { animation: flow 1.6s linear infinite; }

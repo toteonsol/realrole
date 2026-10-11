@@ -6,6 +6,7 @@ import { usePledges, usePostings } from "@/lib/hooks/useRealRole";
 import { WEB3_BOARDS, companyFor } from "@/lib/realrole/companies";
 import { formatPay, publicPostingUrl } from "@/lib/realrole/format";
 import { VerdictBadge } from "./shared";
+import { GhostPosting, PledgeVault, TrustPipeline, ValidatorHalo } from "./Illustrations";
 
 /* ------------------------------------------------------------ helpers -- */
 
@@ -73,6 +74,8 @@ export function HeroDemo() {
   }
   const fact = headlineFact(p);
   return (
+    <div className="relative">
+    <ValidatorHalo />
     <div className="card card-glow relative overflow-hidden p-6" aria-live="polite">
       <div className="flex items-center justify-between">
         <p className="eyebrow">Live from the chain · {p.ats}</p>
@@ -106,6 +109,7 @@ export function HeroDemo() {
         {pool.map((_, n) => <span key={n} className={`h-0.5 flex-1 rounded ${n === i % pool.length ? "bg-brand" : "bg-line-2"}`} />)}
       </div>
     </div>
+    </div>
   );
 }
 
@@ -121,6 +125,8 @@ const STATS = [
 export function Problem() {
   return (
     <section id="problem" className="scroll-mt-24 py-16">
+      <div className="grid items-center gap-8 md:grid-cols-[1.4fr_1fr]">
+      <div>
       <p className="eyebrow">The problem</p>
       <h2 className="mt-3 max-w-3xl text-3xl font-black leading-tight tracking-tight sm:text-5xl">
         The job market runs on claims <span className="text-bad">nobody verifies.</span>
@@ -130,6 +136,9 @@ export function Problem() {
         York to the EU directive (deadline 7 June 2026), but enforcement is complaint-driven and slow. Lawmakers have noticed:
         New York&apos;s ghost-job bill passed both chambers in June 2026.
       </p>
+      </div>
+      <GhostPosting className="mx-auto h-auto w-full max-w-[300px]" />
+      </div>
       <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {STATS.map((s) => (
           <a key={s.n} href={s.url} target="_blank" rel="noreferrer" className="card group p-5 transition hover:border-line-2">
@@ -215,7 +224,11 @@ export function WhyGenLayer() {
         posting, run their own model, and only accept a verdict they agree on.
       </p>
 
-      <div className="card mt-10 overflow-x-auto">
+      <div className="card mt-10 overflow-x-auto p-4 sm:p-8">
+        <div className="min-w-[640px]"><TrustPipeline /></div>
+      </div>
+
+      <div className="card mt-4 overflow-x-auto">
         <table className="w-full min-w-[620px] text-sm">
           <thead>
             <tr className="border-b border-line text-left">
@@ -286,7 +299,9 @@ export function PledgeStory() {
           </div>
           <p className="mono mt-4 text-xs text-ink-3">{count} pledges on chain · {live} active right now</p>
         </div>
-        <ol className="grid gap-3">
+        <div>
+        <div className="mx-auto max-w-[400px]"><PledgeVault /></div>
+        <ol className="mt-6 grid gap-3">
           {[
             ["Bond", "Employer locks GEN behind one posting and picks a window (7–180 days)."],
             ["Prove", "They paste a contract-issued code into the posting. Validators must see it, so only the real employer can activate it."],
@@ -302,6 +317,7 @@ export function PledgeStory() {
             </li>
           ))}
         </ol>
+        </div>
       </div>
     </section>
   );

@@ -33,7 +33,7 @@ export const DEMO_JOBS: DemoJob[] = [
     salary: { min: 150000, max: 185000 },
     datePosted: "2026-10-12",
     validThrough: "2027-01-31",
-    pledgeCode: null,
+    pledgeCode: "realrole-1-2d5cbf75",
     closed: false,
     summary:
       "Build and maintain the settlement layer of a payments protocol. You will own smart contract releases end to end, from design review to audit fixes.",
@@ -51,7 +51,7 @@ export const DEMO_JOBS: DemoJob[] = [
     salary: { min: 140000, max: 175000 },
     datePosted: "2026-10-12",
     validThrough: "2027-01-31",
-    pledgeCode: null,
+    pledgeCode: "realrole-2-2d5cbf75",
     closed: false,
     summary:
       "Lead our developer community: documentation, workshops and the feedback loop between builders and the product team.",
