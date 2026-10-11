@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14161d"/>
+      <stop offset="1" stop-color="#07080b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.72" cy="0.7" r="0.55">
+      <stop offset="0" stop-color="#c6ff3d" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#c6ff3d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.2" cy="0.15" r="0.6">
+      <stop offset="0" stop-color="#8b7bff" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#8b7bff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="2"/>
+    </pattern>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6f4ed"/>
+      <stop offset="1" stop-color="#e4e1d6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <!-- tile -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#grid)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#glow2)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#glow)"/>
+
+  <!-- the job posting -->
+  <g transform="translate(226 170) rotate(-6 250 330)" filter="url(#shadow)">
+    <rect width="440" height="580" rx="40" fill="url(#paper)"/>
+    <!-- folded corner -->
+    <path d="M360 0 H400 A40 40 0 0 1 440 40 V80 Z" fill="#cfcbbd"/>
+    <!-- title -->
+    <rect x="56" y="78" width="250" height="34" rx="17" fill="#17181c"/>
+    <!-- body lines -->
+    <rect x="56" y="146" width="320" height="18" rx="9" fill="#17181c" fill-opacity="0.28"/>
+    <rect x="56" y="184" width="270" height="18" rx="9" fill="#17181c" fill-opacity="0.28"/>
+    <rect x="56" y="222" width="300" height="18" rx="9" fill="#17181c" fill-opacity="0.28"/>
+    <!-- the pay line: the thing that has to be there -->
+    <rect x="56" y="276" width="328" height="70" rx="18" fill="#17181c"/>
+    <text x="90" y="324" font-family="Menlo, 'SF Mono', ui-monospace, monospace" font-size="38" font-weight="800" fill="#c6ff3d">$ ——</text>
+    <rect x="56" y="384" width="230" height="18" rx="9" fill="#17181c" fill-opacity="0.28"/>
+    <rect x="56" y="422" width="280" height="18" rx="9" fill="#17181c" fill-opacity="0.28"/>
+  </g>
+
+  <!-- the verification stamp, pressed onto the posting -->
+  <g transform="translate(676 676) rotate(-14)">
+    <circle r="214" fill="#07080b" fill-opacity="0.35"/>
+    <circle r="196" fill="#c6ff3d"/>
+    <circle r="172" fill="none" stroke="#07080b" stroke-width="8"/>
+    <circle r="112" fill="none" stroke="#07080b" stroke-width="6"/>
+    <g font-family="Menlo, 'SF Mono', ui-monospace, monospace" font-size="30" font-weight="900" fill="#07080b">
+      <text x="0.0" y="-148.0" transform="rotate(0.0 0.0 -148.0)" text-anchor="middle" dominant-baseline="central">V</text>
+      <text x="27.2" y="-145.5" transform="rotate(10.6 27.2 -145.5)" text-anchor="middle" dominant-baseline="central">E</text>
+      <text x="53.5" y="-138.0" transform="rotate(21.2 53.5 -138.0)" text-anchor="middle" dominant-baseline="central">R</text>
+      <text x="77.9" y="-125.8" transform="rotate(31.8 77.9 -125.8)" text-anchor="middle" dominant-baseline="central">I</text>
+      <text x="99.7" y="-109.4" transform="rotate(42.4 99.7 -109.4)" text-anchor="middle" dominant-baseline="central">F</text>
+      <text x="118.1" y="-89.2" transform="rotate(52.9 118.1 -89.2)" text-anchor="middle" dominant-baseline="central">I</text>
+      <text x="132.5" y="-66.0" transform="rotate(63.5 132.5 -66.0)" text-anchor="middle" dominant-baseline="central">E</text>
+      <text x="142.4" y="-40.5" transform="rotate(74.1 142.4 -40.5)" text-anchor="middle" dominant-baseline="central">D</text>
+      <text x="147.4" y="13.7" transform="rotate(95.3 147.4 13.7)" text-anchor="middle" dominant-baseline="central">·</text>
+      <text x="132.5" y="66.0" transform="rotate(116.5 132.5 66.0)" text-anchor="middle" dominant-baseline="central">O</text>
+      <text x="118.1" y="89.2" transform="rotate(127.1 118.1 89.2)" text-anchor="middle" dominant-baseline="central">N</text>
+      <text x="99.7" y="109.4" transform="rotate(137.6 99.7 109.4)" text-anchor="middle" dominant-baseline="central">-</text>
+      <text x="77.9" y="125.8" transform="rotate(148.2 77.9 125.8)" text-anchor="middle" dominant-baseline="central">C</text>
+      <text x="53.5" y="138.0" transform="rotate(158.8 53.5 138.0)" text-anchor="middle" dominant-baseline="central">H</text>
+      <text x="27.2" y="145.5" transform="rotate(169.4 27.2 145.5)" text-anchor="middle" dominant-baseline="central">A</text>
+      <text x="0.0" y="148.0" transform="rotate(180.0 0.0 148.0)" text-anchor="middle" dominant-baseline="central">I</text>
+      <text x="-27.2" y="145.5" transform="rotate(190.6 -27.2 145.5)" text-anchor="middle" dominant-baseline="central">N</text>
+      <text x="-77.9" y="125.8" transform="rotate(211.8 -77.9 125.8)" text-anchor="middle" dominant-baseline="central">·</text>
+      <text x="-118.1" y="89.2" transform="rotate(232.9 -118.1 89.2)" text-anchor="middle" dominant-baseline="central">R</text>
+      <text x="-132.5" y="66.0" transform="rotate(243.5 -132.5 66.0)" text-anchor="middle" dominant-baseline="central">E</text>
+      <text x="-142.4" y="40.5" transform="rotate(254.1 -142.4 40.5)" text-anchor="middle" dominant-baseline="central">A</text>
+      <text x="-147.4" y="13.7" transform="rotate(264.7 -147.4 13.7)" text-anchor="middle" dominant-baseline="central">L</text>
+      <text x="-142.4" y="-40.5" transform="rotate(285.9 -142.4 -40.5)" text-anchor="middle" dominant-baseline="central">R</text>
+      <text x="-132.5" y="-66.0" transform="rotate(296.5 -132.5 -66.0)" text-anchor="middle" dominant-baseline="central">O</text>
+      <text x="-118.1" y="-89.2" transform="rotate(307.1 -118.1 -89.2)" text-anchor="middle" dominant-baseline="central">L</text>
+      <text x="-99.7" y="-109.4" transform="rotate(317.6 -99.7 -109.4)" text-anchor="middle" dominant-baseline="central">E</text>
+      <text x="-53.5" y="-138.0" transform="rotate(338.8 -53.5 -138.0)" text-anchor="middle" dominant-baseline="central">·</text>
+    </g>
+    <path d="M-56 4 L-16 46 L62 -44" fill="none" stroke="#07080b" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
