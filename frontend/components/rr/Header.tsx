@@ -25,6 +25,13 @@ export function Header() {
     <header className="sticky top-0 z-30 border-b border-line bg-paper/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Logo />
+        <nav className="hidden items-center gap-6 text-sm font-semibold text-ink-2 lg:flex" aria-label="Page">
+          <a href="#problem" className="hover:text-ink">Problem</a>
+          <a href="#live" className="hover:text-ink">Live verdicts</a>
+          <a href="#why" className="hover:text-ink">Why GenLayer</a>
+          <a href="#pledge" className="hover:text-ink">Pledge</a>
+          <a href="#app" className="text-brand hover:underline">Open app →</a>
+        </nav>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="mono hidden items-center gap-2 rounded-full border border-line px-3 py-1.5 text-xs text-ink-2 sm:inline-flex">
             <span className="h-1.5 w-1.5 rounded-full bg-good pulse" />
@@ -95,27 +102,37 @@ function CountUp({ value }: { value?: number }) {
   return <>{value === undefined ? "—" : shown}</>;
 }
 
-const ROTATING = ["hide the pay.", "never get filled.", "linger for months.", "waste your weekend."];
+const ROTATING = ["hide the pay.", "never get filled.", "stay up for years.", "waste your weekend."];
 
-export function Hero() {
+export function Hero({ demo, onStart }: { demo: React.ReactNode; onStart: (tab: "audit" | "explore") => void }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % ROTATING.length), 2600);
     return () => clearInterval(t);
   }, []);
   return (
-    <section className="relative pt-14 pb-10 sm:pt-20">
-      <p className="eyebrow rise">Pay transparency × ghost-job accountability · on GenLayer</p>
-      <h1 className="rise mt-4 max-w-4xl text-[2.6rem] font-black leading-[1.02] tracking-tight sm:text-7xl" style={{ animationDelay: "80ms" }}>
-        Some job posts
-        <br />
-        <span key={i} className="text-gradient inline-block rise">{ROTATING[i]}</span>
-      </h1>
-      <p className="rise mt-6 max-w-2xl text-ink-2 sm:text-lg" style={{ animationDelay: "160ms" }}>
-        RealRole puts every posting on the record. Independent GenLayer validators read it straight from the employer&apos;s
-        hiring system, agree on the facts, and stamp a verdict nobody can quietly edit. Employers who mean it can bond GEN
-        behind a <span className="font-bold text-ink">Real Role Pledge</span>.
-      </p>
+    <section className="grid items-center gap-10 pt-12 pb-10 sm:pt-16 lg:grid-cols-[1.15fr_1fr]">
+      <div>
+        <p className="eyebrow rise">The trust layer for job postings · built on GenLayer</p>
+        <h1 className="rise mt-4 text-[2.6rem] font-black leading-[1.02] tracking-tight sm:text-6xl xl:text-7xl" style={{ animationDelay: "80ms" }}>
+          Some job posts
+          <br />
+          <span key={i} className="text-gradient inline-block rise">{ROTATING[i]}</span>
+        </h1>
+        <p className="rise mt-6 max-w-xl text-ink-2 sm:text-lg" style={{ animationDelay: "160ms" }}>
+          RealRole checks any public job posting for honest pay and ghost-job signs. Independent GenLayer validators read it
+          straight from the employer&apos;s hiring system and stamp a verdict on chain that nobody can quietly edit. Employers
+          who mean it can bond money behind a <span className="font-bold text-ink">Real Role Pledge</span>.
+        </p>
+        <div className="rise mt-8 flex flex-wrap gap-3" style={{ animationDelay: "240ms" }}>
+          <button className="btn btn-primary px-6 py-3.5 text-base" onClick={() => onStart("audit")}>Check a job →</button>
+          <button className="btn btn-ghost px-6 py-3.5 text-base" onClick={() => onStart("explore")}>Browse live jobs</button>
+        </div>
+        <p className="mono rise mt-4 text-xs text-ink-3" style={{ animationDelay: "320ms" }}>
+          Reads Stripe · OpenAI · Airbnb · Coinbase · Uniswap · Polymarket and more · no wallet needed to look
+        </p>
+      </div>
+      <div className="rise" style={{ animationDelay: "200ms" }}>{demo}</div>
     </section>
   );
 }
