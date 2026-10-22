@@ -36,7 +36,8 @@
         "enforcer": "0.03",
         "burn": "13.500900000000000001",
         "contract": "0.2"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "enforcer.activate_pledge(1)",
@@ -67,7 +68,8 @@
         "enforcer": "0.0298725537328092",
         "burn": "13.500900000000000001",
         "contract": "0.2"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "employer.create_pledge(protocol-engineer, 40) value=0.1 GEN",
@@ -103,7 +105,8 @@
         "enforcer": "0.0298736913346197",
         "burn": "13.500900000000000001",
         "contract": "0.2"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "employer.create_pledge(protocol-engineer, 40) value=0.1 GEN",
@@ -139,7 +142,8 @@
         "enforcer": "0.02986800317528955",
         "burn": "13.500900000000000001",
         "contract": "0.2"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "employer.create_pledge(protocol-engineer, 40) value=0.1 GEN",
@@ -175,7 +179,8 @@
         "enforcer": "0.03",
         "burn": "13.500900000000000001",
         "contract": "0.202"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "applicant2.register_applicant(2, b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2) value=0.002 GEN",
@@ -206,7 +211,8 @@
         "enforcer": "0.03",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "enforcer.check_pledge(2)",
@@ -237,7 +243,8 @@
         "enforcer": "0.0298743129671895",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "applicant1.withdraw()",
@@ -268,7 +275,8 @@
         "enforcer": "0.0298743129671895",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "enforcer.check_pledge(2)",
@@ -299,7 +307,8 @@
         "enforcer": "0.0297515198532567",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "applicant1.withdraw()",
@@ -330,7 +339,8 @@
         "enforcer": "0.0297515198532567",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "enforcer.check_pledge(2)",
@@ -361,7 +371,8 @@
         "enforcer": "0.0296275583189079",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "applicant1.withdraw()",
@@ -392,7 +403,8 @@
         "enforcer": "0.0296275583189079",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "applicant2.withdraw()",
@@ -423,7 +435,8 @@
         "enforcer": "0.0296275583189079",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "enforcer.withdraw()",
@@ -454,7 +467,8 @@
         "enforcer": "0.0295035833562135",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "enforcer.check_pledge(1)",
@@ -485,7 +499,8 @@
         "enforcer": "0.0293920026123885",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     },
     {
       "step": "employer.withdraw()",
@@ -516,7 +531,8 @@
         "enforcer": "0.0293920026123885",
         "burn": "13.500900000000000001",
         "contract": "0.204"
-      }
+      },
+      "final_status": "FINALIZED"
     }
   ],
   "wallets": {
@@ -710,6 +726,167 @@
       "locked": "0",
       "owed": "0",
       "solvent": true
+    }
+  },
+  "readback": {
+    "stats": {
+      "audits": 15,
+      "boards": 8,
+      "cooldown_s": 60,
+      "day_s": 60,
+      "pledges": 2,
+      "postings": 9
+    },
+    "accounting": {
+      "balance": "0",
+      "burned": "80000000000000000",
+      "locked": "0",
+      "owed": "0",
+      "solvent": true
+    },
+    "pledge1": {
+      "activated_ts": 1792680882,
+      "applicant_count": 0,
+      "applicant_stake": "2000000000000000",
+      "bond": "100000000000000000",
+      "closed_seen_ts": 1792683080,
+      "code": "realrole-1-2d5cbf75",
+      "created_ts": 1792680204,
+      "deadline_ts": 1792683282,
+      "employer": "0x2d5CBF756a09EDf55065FF3D740bF12697C06991",
+      "enforcer": "",
+      "evidence": "[{\"content_sha256\": \"f3f0a7336cec833d248906c46c2743259587d204075247d2e9a5d6882d63e9a0\", \"kind\": \"ACTIVATED\", \"ts\": 1792680882, \"verdict\": \"COMPLIANT\"}, {\"content_sha256\": \"4dcf48c99260cb5dd66fe5e98655743bc51e84a49e47f7dd31caa38ddd74a722\", \"deadline\": 1792683282, \"kind\": \"CHECK\", \"live\": false, \"ts\": 1792683080, \"verdict\": \"CLOSED\"}]",
+      "filled_ts": 0,
+      "id": 1,
+      "last_check_ts": 1792683080,
+      "last_live_ts": 1792680882,
+      "outcome": "CLOSURE_PROVEN_BEFORE_DEADLINE",
+      "posting_key": "jsonld:https://realrole-one.vercel.app/demo/careers/protocol-engineer",
+      "settled_ts": 1792683080,
+      "status": "KEPT",
+      "unavailable_count": 0,
+      "unavailable_first_ts": 0,
+      "unavailable_last_ts": 0,
+      "window_days": 40
+    },
+    "pledge2": {
+      "activated_ts": 1792681001,
+      "applicant_count": 2,
+      "applicant_stake": "2000000000000000",
+      "bond": "100000000000000000",
+      "closed_seen_ts": 0,
+      "code": "realrole-2-2d5cbf75",
+      "created_ts": 1792680864,
+      "deadline_ts": 1792681481,
+      "employer": "0x2d5CBF756a09EDf55065FF3D740bF12697C06991",
+      "enforcer": "0x48E10109c6D487058C1020B444580a530BDb79BB",
+      "evidence": "[{\"content_sha256\": \"86829c42738e582e3175b23e0739d1c1774c8ab49f2cd71ac26f4fc88d5be021\", \"kind\": \"ACTIVATED\", \"ts\": 1792681001, \"verdict\": \"COMPLIANT\"}, {\"content_sha256\": \"86829c42738e582e3175b23e0739d1c1774c8ab49f2cd71ac26f4fc88d5be021\", \"deadline\": 1792681481, \"kind\": \"CHECK\", \"live\": true, \"ts\": 1792681358, \"verdict\": \"COMPLIANT\"}, {\"content_sha256\": \"86829c42738e582e3175b23e0739d1c1774c8ab49f2cd71ac26f4fc88d5be021\", \"deadline\": 1792681481, \"kind\": \"CHECK\", \"live\": true, \"ts\": 1792681464, \"verdict\": \"COMPLIANT\"}, {\"content_sha256\": \"86829c42738e582e3175b23e0739d1c1774c8ab49f2cd71ac26f4fc88d5be021\", \"deadline\": 1792681481, \"kind\": \"CHECK\", \"live\": true, \"ts\": 1792681589, \"verdict\": \"COMPLIANT\"}]",
+      "filled_ts": 0,
+      "id": 2,
+      "last_check_ts": 1792681589,
+      "last_live_ts": 1792681589,
+      "outcome": "LINGERED_PAST_DEADLINE",
+      "posting_key": "jsonld:https://realrole-one.vercel.app/demo/careers/developer-relations-lead",
+      "settled_ts": 1792681589,
+      "status": "BROKEN",
+      "unavailable_count": 0,
+      "unavailable_first_ts": 0,
+      "unavailable_last_ts": 0,
+      "window_days": 8
+    },
+    "payouts1": [
+      {
+        "amount": "100000000000000000",
+        "pledge_id": 1,
+        "reason": "BOND_RETURNED",
+        "status": "CREDITED",
+        "to": "0x2d5CBF756a09EDf55065FF3D740bF12697C06991",
+        "ts": 1792683080
+      }
+    ],
+    "payouts2": [
+      {
+        "amount": "2000000000000000",
+        "pledge_id": 2,
+        "reason": "STAKE_RETURNED",
+        "status": "CREDITED",
+        "to": "0x431ACe5A711cc255869Cf3e09261A102760c75A9",
+        "ts": 1792681589
+      },
+      {
+        "amount": "2000000000000000",
+        "pledge_id": 2,
+        "reason": "STAKE_RETURNED",
+        "status": "CREDITED",
+        "to": "0x9591d698fBF486889f15514E3683Af66ee14cc89",
+        "ts": 1792681589
+      },
+      {
+        "amount": "10000000000000000",
+        "pledge_id": 2,
+        "reason": "ENFORCER_REWARD",
+        "status": "CREDITED",
+        "to": "0x48E10109c6D487058C1020B444580a530BDb79BB",
+        "ts": 1792681589
+      },
+      {
+        "amount": "5000000000000000",
+        "pledge_id": 2,
+        "reason": "APPLICANT_COMPENSATION",
+        "status": "CREDITED",
+        "to": "0x431ACe5A711cc255869Cf3e09261A102760c75A9",
+        "ts": 1792681589
+      },
+      {
+        "amount": "5000000000000000",
+        "pledge_id": 2,
+        "reason": "APPLICANT_COMPENSATION",
+        "status": "CREDITED",
+        "to": "0x9591d698fBF486889f15514E3683Af66ee14cc89",
+        "ts": 1792681589
+      },
+      {
+        "amount": "80000000000000000",
+        "pledge_id": 2,
+        "reason": "BURNED",
+        "status": "BURNED",
+        "to": "0x000000000000000000000000000000000000dEaD",
+        "ts": 1792681589
+      }
+    ],
+    "withdrawals": {
+      "employer": [
+        {
+          "amount": "100000000000000000",
+          "ts": 1792683098
+        }
+      ],
+      "applicant1": [
+        {
+          "amount": "7000000000000000",
+          "ts": 1792681676
+        }
+      ],
+      "applicant2": [
+        {
+          "amount": "7000000000000000",
+          "ts": 1792681694
+        }
+      ],
+      "enforcer": [
+        {
+          "amount": "10000000000000000",
+          "ts": 1792681713
+        }
+      ]
+    },
+    "balances": {
+      "employer": "4.58033342488478025",
+      "applicant1": "0.0540127326775636",
+      "applicant2": "0.03472594541586755",
+      "enforcer": "0.0393920026123885",
+      "burn": "13.580900000000000001",
+      "contract": "0"
     }
   }
 }

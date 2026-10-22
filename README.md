@@ -2,7 +2,7 @@
 
 **Honest job postings, verified by GenLayer consensus.**
 
-**Live app:** https://realrole-one.vercel.app · **Contract (Bradbury):** [`0xB3b7…980A`](https://explorer-bradbury.genlayer.com/address/0xB3b7F0B04ff28f19561FC6906965101120Fa980A)
+**Live app:** https://realrole.ceoism.com · **Steward review response:** [EVIDENCE.md](EVIDENCE.md) · **Contract (Bradbury):** [`0xB3b7…980A`](https://explorer-bradbury.genlayer.com/address/0x51E2a205bfbAEA8b44EffCaA9679a8e0AeB42361)
 
 RealRole puts public job postings on the record. Independent GenLayer validators read each posting straight from the employer's own hiring system, agree on the facts, and an Intelligent Contract stamps a pay-transparency verdict that no company, server or AI model can quietly change. Employers who mean it can bond GEN behind a **Real Role Pledge**: a promise that the posting keeps an honest pay range and does not linger as a ghost job.
 
@@ -40,26 +40,28 @@ Flags: `STALE` (open 90+ days, a common ghost-job signal), `PAY_FROM_DESCRIPTION
 
 Every audit is kept in an on-chain history. Per-employer scorecards count each posting once, under its latest verdict, plus permanent pledge results.
 
-### Layer 2: the Real Role Pledge
+### Layer 2: the Real Role Pledge (v2)
 
-1. `create_pledge` (payable). The employer bonds GEN (≥ 0.01) behind a posting and picks a window of 7–180 days. The contract issues a code like `realrole-3-9f2c1ab0`.
-2. The employer puts the code in the posting text. **This proves control**: only someone who can edit the posting can activate it.
-3. `activate_pledge`. Validators confirm the posting is live, contains the code and has a `COMPLIANT` range. The clock starts.
-4. Applicants call `register_applicant` with a SHA-256 hash of their application receipt. The hash is computed in the browser and the file never leaves the device.
-5. Anyone can call `check_pledge` (rate-limited):
-   - posting closed in time → **KEPT**, bond returned
-   - employer called `mark_filled` and the posting closed within 14 days → **KEPT**
-   - still open past the deadline → **BROKEN** (`LINGERED_PAST_DEADLINE`)
-   - still open 14+ days after being marked filled → **BROKEN** (`ZOMBIE_AFTER_FILL`)
-   - range removed or made dishonest → **BROKEN** (`PAY_TERMS_BROKEN_*`)
-6. A broken bond pays **90% split equally among registered applicants and 10% to the enforcer** who proved it (100% to the enforcer if nobody registered). Every payout is written to an on-chain ledger (`get_payouts`).
-7. **Funds are never locked.** `withdraw_pending` refunds unactivated pledges, and `reclaim_unverifiable` returns the bond if the source stopped answering for 30 days after the deadline.
+1. `create_pledge` (payable). The employer bonds GEN (≥ 0.01) behind a posting and picks a window of 7–180 pledge-days. The contract issues a code.
+2. The employer puts the code in the posting. Validators must see it, which proves the employer controls the posting.
+3. `activate_pledge`. Validators confirm the posting is live, contains the code and has a `COMPLIANT` range.
+4. Applicants call `register_applicant` with a SHA-256 receipt hash **and a stake** (max(0.001 GEN, bond/50), always returned). Hashes are unique, and registration closes at the deadline.
+5. Anyone calls `check_pledge`:
+   - closed, and observed closed **at or before the deadline** → **KEPT**, bond credited back
+   - closed but first observed **after** the deadline → **BROKEN** (`CLOSURE_NOT_PROVEN_BY_DEADLINE`)
+   - live after the deadline, or honest range removed → **BROKEN**
+   - `mark_filled` can only move the deadline **earlier** (to filled + 14 pledge-days)
+6. Broken bonds: staked applicants share **≤ 40%** (≤ 5% each), the enforcer gets **10%** (never the employer), and the rest (**≥ 50%**) is **burned**.
+7. Outages: `attest_unavailable` records consensus-verified outages. `reclaim_unverifiable` needs 3 of them, after the deadline, spanning ≥ 2 pledge-days. A third-party ATS outage refunds the employer; a self-hosted outage counts as broken.
+8. Payouts are **pulled**: settlement credits balances, `withdraw()` delivers them, and `get_accounting()` proves solvency.
+
+Every point raised in the steward review, with tests and finalized Bradbury transactions, is in [EVIDENCE.md](EVIDENCE.md).
 
 ## Live deployments
 
 | Network | Contract | Explorer |
 |---|---|---|
-| **Testnet Bradbury** (chain 4221) | `0xB3b7F0B04ff28f19561FC6906965101120Fa980A` | https://explorer-bradbury.genlayer.com/address/0xB3b7F0B04ff28f19561FC6906965101120Fa980A |
+| **Testnet Bradbury** (chain 4221) | `0x51E2a205bfbAEA8b44EffCaA9679a8e0AeB42361` | https://explorer-bradbury.genlayer.com/address/0x51E2a205bfbAEA8b44EffCaA9679a8e0AeB42361 |
 | Studionet (chain 61999) | `0x6b5b9E20ec672d1D63AdbEF9d42B3F560bE6dB33` | https://explorer-studio.genlayer.com/address/0x6b5b9E20ec672d1D63AdbEF9d42B3F560bE6dB33 |
 
 The Bradbury contract uses a 6-hour cooldown between re-audits and pledge checks. The Studionet demo uses 60 seconds.
@@ -112,7 +114,7 @@ Requirements: Python 3.12+, Node 18+.
 # contract tooling
 uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/genvm-lint check contracts/realrole.py
-.venv/bin/python -m pytest tests/direct -q          # 36 tests: verdicts, consensus, pledges, payouts
+.venv/bin/python -m pytest tests/direct -q          # 51 tests: verdicts, consensus, pledges, payouts, steward scenarios
 
 # build the deployable contract (see "Deploying under Bradbury's gas cap")
 .venv/bin/python scripts/build_contract.py contracts/realrole.py build/realrole.deploy.py
@@ -121,7 +123,7 @@ RR_CONTRACT=build/realrole.deploy.py .venv/bin/python -m pytest tests/direct -q 
 # deploy (Studionet is gasless; Bradbury needs a funded key in PRIVATE_KEY or .demo-key.testnetBradbury)
 npm install
 node scripts/deploy.mjs studionet 60                 # args: network, cooldown seconds
-node scripts/deploy.mjs testnetBradbury 21600
+node scripts/deploy.mjs testnetBradbury 21600 86400   # cooldown_s, day_s (the live demo uses 60 60)
 
 # poke it from the command line
 node scripts/call.mjs studionet write audit_posting '["greenhouse","ripple","8209410"]'
