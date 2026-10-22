@@ -3,16 +3,44 @@
 import { useState } from "react";
 import type { Pledge } from "@/lib/contracts/RealRole";
 import { useWallet } from "@/lib/genlayer/wallet";
-import { useIsApplicant, usePayouts, usePledges, useStats, useTx } from "@/lib/hooks/useRealRole";
+import { useAccounting, useIsApplicant, useOwed, usePayouts, usePledges, useStats, useTx } from "@/lib/hooks/useRealRole";
 import {
   formatDate, formatGen, keyToArgs, parseGen, parsePostingUrl, publicPostingUrl, sha256Hex, shortAddr,
 } from "@/lib/realrole/format";
 import { Empty, Loading, PledgeBadge, TxLink, TxProgress } from "./shared";
 
+function Balance() {
+  const { address } = useWallet();
+  const owed = useOwed(address);
+  const acct = useAccounting();
+  const tx = useTx();
+  const amount = BigInt(owed.data ?? "0");
+  return (
+    <section className="card p-5 sm:p-6" aria-labelledby="bal-h">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="eyebrow">Payouts are pulled, not pushed</p>
+          <h2 id="bal-h" className="mt-1 text-xl font-black">Your claimable GEN: {address ? formatGen(amount) : "connect a wallet"}</h2>
+          <p className="mt-1 text-sm text-ink-2">Refunds, applicant compensation, returned stakes and enforcer rewards are credited here. Withdraw sends them to your wallet.</p>
+        </div>
+        <button className="btn btn-primary" disabled={!amount || tx.busy} onClick={() => tx.run("withdraw", [])}>Withdraw</button>
+      </div>
+      {acct.data && (
+        <p className="mono mt-4 text-xs text-ink-3">
+          contract holds {formatGen(acct.data.balance)} · owed {formatGen(acct.data.owed)} · locked in pledges {formatGen(acct.data.locked)} · burned {formatGen(acct.data.burned)} ·{" "}
+          <span className={acct.data.solvent ? "text-good" : "text-bad"}>{acct.data.solvent ? "solvent" : "INSOLVENT"}</span>
+        </p>
+      )}
+      <TxProgress tx={tx} />
+    </section>
+  );
+}
+
 export function Pledges() {
   const pledges = usePledges();
   return (
     <div className="grid gap-10">
+      <Balance />
       <CreatePledge />
       <section aria-labelledby="pledges-h">
         <h2 id="pledges-h" className="text-2xl font-black tracking-tight">Pledges</h2>
@@ -176,18 +204,23 @@ function PledgeCard({ p }: { p: Pledge }) {
         {p.status === "ACTIVE" && isEmployer && (
           <button className="btn btn-ghost" disabled={tx.busy} onClick={() => tx.run("mark_filled", [p.id])}>Mark role filled</button>
         )}
-        {live && isEmployer && now > p.deadline_ts + 30 * 86400 && (
-          <button className="btn btn-ghost" disabled={tx.busy} onClick={() => tx.run("reclaim_unverifiable", [p.id])}>Reclaim (unverifiable)</button>
+        {live && now > p.deadline_ts && (
+          <button className="btn btn-ghost" disabled={tx.busy} title="Validators probe the source; 3 outage attestations over time allow a settlement" onClick={() => tx.run("attest_unavailable", [p.id])}>
+            Attest source unavailable ({p.unavailable_count ?? 0}/3)
+          </button>
+        )}
+        {live && (p.unavailable_count ?? 0) >= 3 && (
+          <button className="btn btn-ghost" disabled={tx.busy} onClick={() => tx.run("reclaim_unverifiable", [p.id])}>Settle on outage evidence</button>
         )}
         {(p.status === "KEPT" || p.status === "BROKEN" || p.status === "WITHDRAWN" || p.status === "UNVERIFIABLE") && (
           <button className="btn btn-ghost" onClick={() => setShowPayouts((s) => !s)}>{showPayouts ? "Hide" : "Show"} payouts</button>
         )}
       </div>
 
-      {p.status === "ACTIVE" && !isEmployer && (
+      {(p.status === "ACTIVE" || p.status === "FILLED_PENDING_CLOSE") && !isEmployer && now <= p.deadline_ts && (
         <div className="mt-4 rounded-lg border border-line p-3 text-sm">
           {isApplicant.data ? (
-            <p className="text-good">You are registered. If this pledge breaks, you share 90% of the bond.</p>
+            <p className="text-good">You are registered. If this pledge breaks you receive up to 5% of the bond, and your stake is always returned.</p>
           ) : (
             <>
               <p className="text-ink-2">
@@ -200,7 +233,7 @@ function PledgeCard({ p }: { p: Pledge }) {
                   <input type="file" className="sr-only" onChange={(e) => onReceiptFile(e.target.files?.[0])} />
                 </label>
                 {receipt && <code className="mono text-xs text-ink-3">sha256 {receipt.slice(0, 16)}…</code>}
-                <button className="btn btn-primary text-xs" disabled={!receipt || tx.busy} onClick={() => tx.run("register_applicant", [p.id, receipt])}>
+                <button className="btn btn-primary text-xs" disabled={!receipt || tx.busy} onClick={() => tx.run("register_applicant", [p.id, receipt], BigInt(p.applicant_stake ?? "0"))}>
                   Register as applicant
                 </button>
               </div>

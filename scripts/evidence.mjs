@@ -102,8 +102,8 @@ if (phase === "kept") {
   save();
 }
 
-if (phase === "broken") {
-  await write("enforcer", "check_pledge", [2], 0n, "Posting still live after deadline: BROKEN");
+if (phase === "broken" || phase === "payout") {
+  if (phase === "broken") await write("enforcer", "check_pledge", [2], 0n, "Posting still live after deadline: BROKEN");
   log.payouts2 = await read("get_payouts", [2]);
   for (const n of ["applicant1", "applicant2", "enforcer"]) {
     const owed = await read("get_owed", [addr(W[n])]);

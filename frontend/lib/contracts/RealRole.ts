@@ -96,6 +96,10 @@ export interface Pledge {
   outcome: string;
   enforcer: string;
   applicant_count: number;
+  applicant_stake?: string;
+  unavailable_count?: number;
+  closed_seen_ts?: number;
+  evidence?: string;
 }
 
 export interface PayoutRow {
@@ -236,6 +240,14 @@ export class RealRoleContract {
 
   async payouts(pledgeId: number): Promise<PayoutRow[]> {
     return this.read("get_payouts", [pledgeId]);
+  }
+
+  async owed(who: string): Promise<string> {
+    return this.read("get_owed", [who]);
+  }
+
+  async accounting(): Promise<{ balance: string; owed: string; locked: string; burned: string; solvent: boolean }> {
+    return this.read("get_accounting");
   }
 
   async isApplicant(pledgeId: number, who: string): Promise<boolean> {

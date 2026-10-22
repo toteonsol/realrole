@@ -55,6 +55,16 @@ export function usePayouts(pledgeId: number, enabled: boolean) {
   });
 }
 
+export function useOwed(who: string | null) {
+  const c = useRealRole();
+  return useQuery({ queryKey: ["owed", who], queryFn: () => c!.owed(who!), enabled: !!c && !!who, refetchInterval: REFRESH_MS });
+}
+
+export function useAccounting() {
+  const c = useRealRole();
+  return useQuery({ queryKey: ["accounting"], queryFn: () => c!.accounting(), enabled: !!c, refetchInterval: REFRESH_MS });
+}
+
 export function useIsApplicant(pledgeId: number, who: string | null) {
   const c = useRealRole();
   return useQuery({

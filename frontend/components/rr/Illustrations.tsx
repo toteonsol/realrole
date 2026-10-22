@@ -165,7 +165,7 @@ export function TrustPipeline() {
 /** The pledge: a GEN bond with two exits. */
 export function PledgeVault() {
   return (
-    <svg viewBox="0 0 440 360" className="h-auto w-full" role="img" aria-label="Diagram: an employer's GEN bond returns to them if the pledge is kept; if broken, 90% goes to applicants and 10% to the enforcer">
+    <svg viewBox="0 0 440 360" className="h-auto w-full" role="img" aria-label="Diagram: an employer's GEN bond returns to them if the pledge is kept; if broken, staked applicants share up to 40%, the enforcer gets 10% and the rest is burned">
       {/* vault */}
       <g transform="translate(150 40)">
         <rect width="140" height="150" rx="20" fill={C.surface} stroke={C.line2} strokeWidth="1.5" />
@@ -194,8 +194,8 @@ export function PledgeVault() {
       <g transform="translate(300 250)">
         <rect width="130" height="74" rx="14" fill={C.surface} stroke={C.bad} strokeOpacity="0.6" />
         <text x="65" y="28" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="12" fontWeight="800" fill={C.bad}>BROKEN</text>
-        <text x="65" y="48" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10.5" fill={C.ink2}>90% → applicants</text>
-        <text x="65" y="63" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10.5" fill={C.ink2}>10% → enforcer</text>
+        <text x="65" y="48" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10.5" fill={C.ink2}>≤40% applicants</text>
+        <text x="65" y="63" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="10.5" fill={C.ink2}>10% enforcer · rest burned</text>
       </g>
 
       {/* applicants */}

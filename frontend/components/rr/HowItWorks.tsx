@@ -41,9 +41,11 @@ export function HowItWorks() {
         <h2 className="text-2xl font-black tracking-tight">The Real Role Pledge</h2>
         <ul className="mt-3 grid gap-2 text-sm text-ink-2">
           <li>The employer bonds GEN and places a contract-issued code in the posting. Validators must see the code, so only someone who controls the posting can activate it.</li>
-          <li><strong className="text-ink">Kept</strong>: the posting closes before the deadline, or within 14 days of being marked filled. The bond returns.</li>
-          <li><strong className="text-ink">Broken</strong>: the posting lingers past its deadline, stays up 14+ days after being marked filled, or drops its honest range. 90% of the bond is split among registered applicants and 10% goes to whoever triggered the check (all of it if nobody registered).</li>
-          <li>If the source stops answering for 30 days after the deadline, the employer can reclaim the bond, so funds are never locked.</li>
+          <li><strong className="text-ink">Kept</strong> only when a consensus check records the posting closed at or before the deadline. Closing late is not enough: the closure has to be proven on chain in time.</li>
+          <li><strong className="text-ink">Mark filled</strong> can only bring the deadline forward (to 14 days after filling), never extend it.</li>
+          <li><strong className="text-ink">Broken</strong> when the posting is seen live after the deadline, first seen closed after it, or loses its honest range. Staked applicants share up to 40% (max 5% each), the enforcer gets 10%, and the rest (at least 50%) is burned, so an employer farming fake applicants still loses half.</li>
+          <li><strong className="text-ink">Outages</strong> settle only on evidence: three consensus-verified attestations after the deadline, spread over two days. Greenhouse, Lever or Ashby outages refund the employer; a self-hosted page going dark counts as broken.</li>
+          <li>All payouts are credited first and pulled with <em>Withdraw</em>, and the contract publishes its solvency (holdings vs. owed and locked).</li>
         </ul>
       </section>
 
@@ -52,7 +54,7 @@ export function HowItWorks() {
         <ul className="mt-3 grid list-disc gap-2 pl-5 text-sm text-ink-2">
           <li>Verdicts are informational, not legal advice. The jurisdiction list is a fixed vocabulary in the contract.</li>
           <li>RealRole can’t prove anyone was hired. The pledge measures what is publicly checkable: the posting closes on time and keeps its range.</li>
-          <li>Applicant registration takes a receipt hash, not proof of application, so one person could register several wallets. Verified applications (e.g. zk-email) are on the roadmap.</li>
+          <li>Applicants stake GEN and register a receipt hash, not a verified application. Payout caps and burning mean wallet farming can never recover more than half a bond; verified applications (e.g. zk-email) are on the roadmap.</li>
           <li>Company-hosted Greenhouse pages need the job-boards.greenhouse.io link. Workday and iCIMS aren’t supported yet.</li>
         </ul>
       </section>

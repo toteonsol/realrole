@@ -306,7 +306,7 @@ export function PledgeStory() {
             ["Bond", "Employer locks GEN behind one posting and picks a window (7–180 days)."],
             ["Prove", "They paste a contract-issued code into the posting. Validators must see it, so only the real employer can activate it."],
             ["Watch", "Anyone can trigger a check. Validators re-read the posting from its source."],
-            ["Settle", "Closed on time → bond returned. Lingering or range removed → 90% to applicants, 10% to whoever caught it."],
+            ["Settle", "Closed on time → bond returned. Late, lingering or range removed → staked applicants share up to 40%, the enforcer 10%, and the rest is burned."],
           ].map(([t, d], n) => (
             <li key={t} className="card flex gap-4 p-4">
               <span className="mono flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand font-black text-brand-ink">{n + 1}</span>

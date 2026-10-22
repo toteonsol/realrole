@@ -62,7 +62,12 @@ export function getStudioUrl(): string {
  * Get the contract address from environment variables
  */
 export function getContractAddress(): string {
-  const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  // Public on-chain addresses, versioned in code. NEXT_PUBLIC_REALROLE_CONTRACT overrides for local work.
+  const DEPLOYED: Record<string, string> = {
+    testnetBradbury: "0x51E2a205bfbAEA8b44EffCaA9679a8e0AeB42361", // v2 (steward fixes)
+    studionet: "0x6b5b9E20ec672d1D63AdbEF9d42B3F560bE6dB33",
+  };
+  const address = process.env.NEXT_PUBLIC_REALROLE_CONTRACT || DEPLOYED[NETWORK_NAME];
   if (!address) {
     // Return empty string during build, error will be shown in UI during runtime
     return "";
