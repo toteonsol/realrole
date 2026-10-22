@@ -1,3 +1,4 @@
+import "./gasmargin.mjs";
 // Call a RealRole method from the command line and print the outcome.
 //   node scripts/call.mjs <network> write <method> [jsonArgs] [valueWei]
 //   node scripts/call.mjs <network> read  <method> [jsonArgs]
@@ -10,7 +11,7 @@ const chain = chains[chainName];
 const { address } = JSON.parse(readFileSync(`deployments.${chainName}.json`, "utf8"));
 const keyFile = `.demo-key.${chainName}`;
 const key = process.env.PRIVATE_KEY || (existsSync(keyFile) ? readFileSync(keyFile, "utf8").trim() : undefined);
-const client = createClient({ chain, ...(key ? { account: createAccount(key) } : {}) });
+const client = (createClient({ chain, ...(key ? { account: createAccount(key) } : {}) }));
 const args = JSON.parse(rawArgs);
 const show = (v) => JSON.stringify(v, (k, x) => (typeof x === "bigint" ? x.toString() : x), 2);
 

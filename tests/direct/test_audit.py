@@ -50,11 +50,37 @@ def test_inverted_range_is_invalid(direct_vm, rr):
     assert rr.audit_posting("ashby", "acme", "job-1") == "INVALID_RANGE"
 
 
+QUOTE = "Base pay is $140,000 - $170,000 per year."
+
+
 def test_range_written_in_description_is_used(direct_vm, rr):
-    direct_vm.mock_web(LV, {"status": 200, "body": lever_job(text="Base pay is $140,000 - $170,000 per year.")})
-    direct_vm.mock_llm(LLM_PATTERN, llm(["US-CA"], {"min": 140000, "max": 170000, "currency": "usd", "interval": "year"}))
+    direct_vm.mock_web(LV, {"status": 200, "body": lever_job(text=f"Great team. {QUOTE} Apply now.")})
+    direct_vm.mock_llm(LLM_PATTERN, llm(["US-CA"], {"min": 140000, "max": 170000, "currency": "usd", "interval": "year", "quote": QUOTE}))
     assert rr.audit_posting("lever", "acme", "abc-123") == "COMPLIANT"
-    assert "PAY_FROM_DESCRIPTION" in rr.get_posting("lever", "acme", "abc-123")["flags"]
+    p = rr.get_posting("lever", "acme", "abc-123")
+    assert "PAY_FROM_DESCRIPTION" in p["flags"]
+    assert len(json.loads(p["facts"])["text_pay"]["quote_sha256"]) == 64
+
+
+def test_prose_range_without_verbatim_quote_is_discarded(direct_vm, rr):
+    # The LLM claims a range but quotes text that is not in the posting: discarded.
+    direct_vm.mock_web(LV, {"status": 200, "body": lever_job(text="Competitive pay.")})
+    direct_vm.mock_llm(LLM_PATTERN, llm(["US-CA"], {"min": 140000, "max": 170000, "currency": "USD", "interval": "YEAR", "quote": QUOTE}))
+    assert rr.audit_posting("lever", "acme", "abc-123") == "MISSING_RANGE"
+
+
+def test_prose_range_numbers_must_appear_in_quote(direct_vm, rr):
+    # Quote is real, but the reported numbers are not the ones in it: discarded.
+    direct_vm.mock_web(LV, {"status": 200, "body": lever_job(text=QUOTE)})
+    direct_vm.mock_llm(LLM_PATTERN, llm(["US-CA"], {"min": 150000, "max": 170000, "currency": "USD", "interval": "YEAR", "quote": QUOTE}))
+    assert rr.audit_posting("lever", "acme", "abc-123") == "MISSING_RANGE"
+
+
+def test_facts_carry_source_fingerprint(direct_vm, rr):
+    direct_vm.mock_web(GH, {"status": 200, "body": greenhouse_job(pay=(150000, 180000, "Annual"))})
+    direct_vm.mock_llm(LLM_PATTERN, llm(["US-NYC"]))
+    rr.audit_posting("greenhouse", "acme", "111")
+    assert len(json.loads(rr.get_posting("greenhouse", "acme", "111")["facts"])["content_sha256"]) == 64
 
 
 def test_llm_output_is_restricted_to_closed_vocabulary(direct_vm, rr):
@@ -163,11 +189,24 @@ def test_validator_rejects_leader_that_ignored_pay_law(direct_vm, rr):
     assert direct_vm.run_validator(leader_result=lying) is False
 
 
-def test_validator_tolerates_small_prose_reading_differences(direct_vm, rr):
-    direct_vm.mock_web(LV, {"status": 200, "body": lever_job(text="Pay $140,000 - $170,000")})
-    direct_vm.mock_llm(LLM_PATTERN, llm(["US-CA"], {"min": 140000, "max": 170000, "currency": "USD", "interval": "YEAR"}))
+def test_validator_rejects_conflicting_source_version(direct_vm, rr):
+    # Leader saw one version of the posting; the validator fetches an edited one.
+    direct_vm.mock_web(GH, {"status": 200, "body": greenhouse_job(pay=(150000, 180000, "Annual"), content="Version A")})
+    direct_vm.mock_llm(LLM_PATTERN, llm(["US-NYC"]))
+    rr.audit_posting("greenhouse", "acme", "111")
+    direct_vm.clear_mocks()
+    direct_vm.mock_web(GH, {"status": 200, "body": greenhouse_job(pay=(150000, 180000, "Annual"), content="Version B")})
+    direct_vm.mock_llm(LLM_PATTERN, llm(["US-NYC"]))
+    assert direct_vm.run_validator() is False
+
+
+def test_validator_rejects_different_prose_range(direct_vm, rr):
+    text = f"{QUOTE} Senior candidates: $150,000 - $170,000 per year."
+    direct_vm.mock_web(LV, {"status": 200, "body": lever_job(text=text)})
+    direct_vm.mock_llm(LLM_PATTERN, llm(["US-CA"], {"min": 140000, "max": 170000, "currency": "USD", "interval": "YEAR", "quote": QUOTE}))
     rr.audit_posting("lever", "acme", "abc-123")
     direct_vm.clear_mocks()
-    direct_vm.mock_web(LV, {"status": 200, "body": lever_job(text="Pay $140,000 - $170,000")})
-    direct_vm.mock_llm(LLM_PATTERN, llm(["US-CA", "US-REMOTE"], {"min": 140500, "max": 170000, "currency": "USD", "interval": "YEAR"}))
-    assert direct_vm.run_validator() is True
+    direct_vm.mock_web(LV, {"status": 200, "body": lever_job(text=text)})
+    direct_vm.mock_llm(LLM_PATTERN, llm(["US-CA"], {"min": 150000, "max": 170000, "currency": "USD", "interval": "YEAR",
+                                                  "quote": "Senior candidates: $150,000 - $170,000 per year."}))
+    assert direct_vm.run_validator() is False

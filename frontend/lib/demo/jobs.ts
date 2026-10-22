@@ -34,7 +34,7 @@ export const DEMO_JOBS: DemoJob[] = [
     datePosted: "2026-10-12",
     validThrough: "2027-01-31",
     pledgeCode: "realrole-1-2d5cbf75",
-    closed: false,
+    closed: true,
     summary:
       "Build and maintain the settlement layer of a payments protocol. You will own smart contract releases end to end, from design review to audit fixes.",
     responsibilities: [

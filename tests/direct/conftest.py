@@ -79,4 +79,4 @@ LLM_PATTERN = r"pay-transparency registry"
 def rr(direct_vm, direct_deploy, direct_alice):
     direct_vm.warp(T0)
     direct_vm.sender = direct_alice
-    return direct_deploy(CONTRACT, 60)
+    return direct_deploy(CONTRACT, 60, 86400)

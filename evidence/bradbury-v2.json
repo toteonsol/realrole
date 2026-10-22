@@ -1,0 +1,115 @@
+{
+  "contract": "0x51E2a205bfbAEA8b44EffCaA9679a8e0AeB42361",
+  "network": "testnetBradbury (4221)",
+  "steps": [
+    {
+      "step": "employer.create_pledge(protocol-engineer, 40) value=0.1 GEN",
+      "note": "Pledge #1 created earlier in this run; see pledge read-back",
+      "tx": "see readback"
+    },
+    {
+      "step": "employer.create_pledge(jsonld, , https://realrole-one.vercel.app/demo/careers/developer-relations-lead, 8) value=0.1 GEN",
+      "note": "Pledge #2: to be BROKEN (left open past deadline)",
+      "tx": "0x9e90f24f09bd0f3938755c75d8d2862dfb349c85cb3ec070a0aee17f8479436c",
+      "explorer": "https://explorer-bradbury.genlayer.com/tx/0x9e90f24f09bd0f3938755c75d8d2862dfb349c85cb3ec070a0aee17f8479436c",
+      "status": "ACCEPTED",
+      "execution": "FINISHED_WITH_RETURN",
+      "votes": [
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE"
+      ],
+      "balances_before": {
+        "employer": "4.5834811026408969",
+        "applicant1": "0.04955237146365275",
+        "applicant2": "0.03",
+        "enforcer": "0.03",
+        "burn": "13.500900000000000001",
+        "contract": "0.1"
+      },
+      "balances_after": {
+        "employer": "4.48334055982678625",
+        "applicant1": "0.04955237146365275",
+        "applicant2": "0.03",
+        "enforcer": "0.03",
+        "burn": "13.500900000000000001",
+        "contract": "0.2"
+      }
+    },
+    {
+      "step": "enforcer.activate_pledge(1)",
+      "note": "Validators find the pledge code on the posting",
+      "tx": "0xbb5413f6e287cc7f58caf0931ad0ea303667717f3a97e0af82922a29764ecadb",
+      "explorer": "https://explorer-bradbury.genlayer.com/tx/0xbb5413f6e287cc7f58caf0931ad0ea303667717f3a97e0af82922a29764ecadb",
+      "status": "ACCEPTED",
+      "execution": "FINISHED_WITH_RETURN",
+      "votes": [
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE",
+        "AGREE"
+      ],
+      "balances_before": {
+        "employer": "4.48334055982678625",
+        "applicant1": "0.04955237146365275",
+        "applicant2": "0.03",
+        "enforcer": "0.03",
+        "burn": "13.500900000000000001",
+        "contract": "0.2"
+      },
+      "balances_after": {
+        "employer": "4.48334055982678625",
+        "applicant1": "0.04955237146365275",
+        "applicant2": "0.03",
+        "enforcer": "0.0298725537328092",
+        "burn": "13.500900000000000001",
+        "contract": "0.2"
+      }
+    },
+    {
+      "step": "employer.create_pledge(protocol-engineer, 40) value=0.1 GEN",
+      "note": "Pledge #1 created earlier in this run; see pledge read-back",
+      "tx": "see readback"
+    },
+    {
+      "step": "enforcer.activate_pledge(1)",
+      "note": "Validators find the pledge code on the posting",
+      "tx": "0x8d9e859fcfb8f4b9bb580d36af3398211e041a4b8987c49b27cbab690bac449c",
+      "explorer": "https://explorer-bradbury.genlayer.com/tx/0x8d9e859fcfb8f4b9bb580d36af3398211e041a4b8987c49b27cbab690bac449c",
+      "status": "ACCEPTED",
+      "execution": "FINISHED_WITH_ERROR",
+      "votes": [
+        "DISAGREE",
+        "DISAGREE",
+        "DISAGREE",
+        "DISAGREE",
+        "DISAGREE"
+      ],
+      "balances_before": {
+        "employer": "4.48308331935440105",
+        "applicant1": "0.04955237146365275",
+        "applicant2": "0.03",
+        "enforcer": "0.03",
+        "burn": "13.500900000000000001",
+        "contract": "0.2"
+      },
+      "balances_after": {
+        "employer": "4.48308331935440105",
+        "applicant1": "0.04955237146365275",
+        "applicant2": "0.03",
+        "enforcer": "0.0298736913346197",
+        "burn": "13.500900000000000001",
+        "contract": "0.2"
+      }
+    }
+  ],
+  "wallets": {
+    "employer": "0x2d5CBF756a09EDf55065FF3D740bF12697C06991",
+    "applicant1": "0x431ACe5A711cc255869Cf3e09261A102760c75A9",
+    "applicant2": "0x9591d698fBF486889f15514E3683Af66ee14cc89",
+    "enforcer": "0x48E10109c6D487058C1020B444580a530BDb79BB"
+  }
+}

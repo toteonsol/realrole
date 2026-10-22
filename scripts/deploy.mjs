@@ -20,7 +20,8 @@ console.log(`network ${chainName} (chain ${chain.id}) deployer ${account.address
 const contractFile = process.env.REALROLE_FILE || "build/realrole.deploy.py";
 const code = new Uint8Array(readFileSync(contractFile));
 console.log(`contract ${contractFile} (${code.length} bytes)`);
-const hash = await client.deployContract({ code, args: [cooldown] });
+const dayS = Number(process.argv[4] || 86400);
+const hash = await client.deployContract({ code, args: [cooldown, dayS] });
 console.log("deploy tx", hash);
 const receipt = await client.waitForTransactionReceipt({ hash, status: "ACCEPTED", retries: 300, interval: 5000 });
 const leader = receipt.consensus_data?.leader_receipt?.[0];
@@ -29,5 +30,5 @@ if (leader && leader.execution_result !== "SUCCESS") {
 }
 const address = receipt.data?.contract_address || receipt.txDataDecoded?.contractAddress || receipt.to_address;
 console.log("RealRole deployed at", address);
-writeFileSync(`deployments.${chainName}.json`, JSON.stringify({ chain: chainName, chainId: chain.id, address, deployTx: hash, cooldown, deployedAt: new Date().toISOString() }, null, 2));
+writeFileSync(`deployments.${chainName}.json`, JSON.stringify({ chain: chainName, chainId: chain.id, address, deployTx: hash, cooldown, dayS, deployedAt: new Date().toISOString() }, null, 2));
 if (!process.env.PRIVATE_KEY && !existsSync(keyFile)) writeFileSync(keyFile, key, { mode: 0o600 });

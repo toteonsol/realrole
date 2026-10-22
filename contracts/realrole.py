@@ -1,5 +1,6 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
+import hashlib
 import html
 import json
 import re
@@ -17,9 +18,15 @@ from genlayer import *
 #
 # Layer 2 (Real Role Pledge): an employer bonds GEN behind a posting, proves
 # control by placing a pledge code in the posting text, and promises that the
-# posting keeps an honest pay range and does not linger (it closes before the
-# deadline, or within 14 days of being marked filled). Breaking the pledge pays
-# the bond to registered applicants and the enforcer who proved it.
+# posting keeps an honest pay range and that its closure is proven on chain
+# before the deadline. Settlement is deterministic:
+#   * KEPT only when a consensus observation shows the posting closed at or
+#     before the (possibly tightened) deadline. Closing late is not enough.
+#   * BROKEN when it is seen live past the deadline, seen closed only after the
+#     deadline, or its honest range disappears.
+#   * A broken bond pays a capped pool to staked applicants, 10% to the
+#     enforcer, and burns the rest (at least 50%), so self-dealing never pays.
+#   * Payouts are credited, then pulled with withdraw() (no push transfers).
 #
 # The LLM only observes (jurisdictions from messy location text, a pay range
 # written in prose). Every verdict, state transition and payout is derived
@@ -50,14 +57,23 @@ STALE_DAYS = 90
 DESC_LIMIT = 8000
 DAY_S = 86400
 
+# Pledge durations are counted in "pledge days". One pledge day is
+# `day_s` seconds, set at deploy: 86400 in production. A testnet deployment may
+# shorten it (minimum 60s) so deadline behaviour can be demonstrated live.
 MIN_BOND = 10**16  # 0.01 GEN
 MIN_WINDOW_DAYS = 7
 MAX_WINDOW_DAYS = 180
 CLOSE_GRACE_DAYS = 14
-RECLAIM_AFTER_DAYS = 30
-ENFORCER_BPS = 1000  # 10% of a broken bond goes to the enforcer
+UNAVAILABLE_ATTESTATIONS = 3  # consensus-verified outages needed before a reclaim
+UNAVAILABLE_SPAN_DAYS = 2  # first to last outage attestation must span this
+ENFORCER_BPS = 1000  # 10% of a broken bond to the enforcer
+APPLICANT_POOL_BPS = 4000  # at most 40% of a broken bond to applicants
+APPLICANT_MAX_BPS = 500  # each applicant receives at most 5% of the bond
+APPLICANT_STAKE_DIV = 50  # applicant stake = max(MIN_APPLICANT_STAKE, bond / 50)
+MIN_APPLICANT_STAKE = 10**15  # 0.001 GEN
 MAX_APPLICANTS = 100
-PAY_TOLERANCE_BPS = 200  # validators may read prose ranges within 2%
+THIRD_PARTY_SOURCES = ("greenhouse", "lever", "ashby")  # employer cannot fake outages
+BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD"
 
 
 @gl.evm.contract_interface
@@ -117,6 +133,13 @@ class Pledge:
     outcome: str
     enforcer: str
     applicant_count: u32
+    applicant_stake: u256
+    last_live_ts: u64
+    closed_seen_ts: u64
+    unavailable_count: u32
+    unavailable_first_ts: u64
+    unavailable_last_ts: u64
+    evidence_json: str
 
 
 @allow_storage
@@ -126,6 +149,15 @@ class Payout:
     to: Address
     amount: u256
     reason: str
+    ts: u64
+    status: str  # CREDITED (claimable via withdraw) or BURNED (sent to BURN_ADDRESS)
+
+
+@allow_storage
+@dataclass
+class Withdrawal:
+    to: Address
+    amount: u256
     ts: u64
 
 
@@ -357,7 +389,25 @@ def _parse_source(ats: str, job_id: str, status: int, body: bytes | None, now: i
     return facts
 
 
-def _sanitize_llm(result) -> dict:
+def _norm_text(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "")).strip().lower()
+
+
+def _amounts(text: str) -> list:
+    """Money amounts written in a snippet, in cents: "$140,000", "140k", "$62.50"."""
+    out = []
+    for m in re.finditer(r"(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*([kK])?", text):
+        try:
+            v = float(m.group(1).replace(",", ""))
+        except ValueError:
+            continue
+        if m.group(2):
+            v *= 1000
+        out.append(int(round(v * 100)))
+    return out
+
+
+def _sanitize_llm(result, desc: str) -> dict:
     if not isinstance(result, dict):
         raise gl.vm.UserError("LLM_MALFORMED")
     juris = sorted({j for j in result.get("jurisdictions") or [] if j in JURISDICTIONS})
@@ -369,8 +419,16 @@ def _sanitize_llm(result) -> dict:
         lo, hi = _cents(tp.get("min")), _cents(tp.get("max"))
         cur = str(tp.get("currency") or "").upper()[:3]
         iv = str(tp.get("interval") or "").upper()
-        if lo > 0 and hi > 0 and len(cur) == 3 and iv in INTERVALS:
-            text_pay = {"min": lo, "max": hi, "currency": cur, "interval": iv}
+        quote = re.sub(r"\s+", " ", str(tp.get("quote") or "")).strip()[:300]
+        # The range must be backed by an exact quote from the fetched posting, and both
+        # numbers must be literally present in that quote. Otherwise it is discarded.
+        quoted = bool(quote) and _norm_text(quote) in _norm_text(desc)
+        amounts = _amounts(quote) if quoted else []
+        if lo > 0 and hi > 0 and len(cur) == 3 and iv in INTERVALS and lo in amounts and hi in amounts:
+            text_pay = {
+                "min": lo, "max": hi, "currency": cur, "interval": iv,
+                "quote_sha256": hashlib.sha256(_norm_text(quote).encode()).hexdigest(),
+            }
     return {"jurisdictions": juris, "text_pay": text_pay}
 
 
@@ -396,12 +454,13 @@ these codes: {", ".join(JURISDICTIONS)}.
 
 Task 2. If the description itself states a base pay range for this role,
 report it; otherwise null. Do not invent or estimate numbers. Ignore equity,
-bonus and token amounts.
+bonus and token amounts. "quote" must copy, character for character, the
+sentence from the description that states the range.
 
 Respond with JSON only:
-{{"jurisdictions": ["US-CA"], "text_pay": {{"min": 150000, "max": 180000, "currency": "USD", "interval": "YEAR"}}}}
+{{"jurisdictions": ["US-CA"], "text_pay": {{"min": 150000, "max": 180000, "currency": "USD", "interval": "YEAR", "quote": "The base salary range is $150,000 - $180,000."}}}}
 interval is one of YEAR, MONTH, WEEK, DAY, HOUR. Use null for text_pay when absent."""
-    return _sanitize_llm(gl.nondet.exec_prompt(prompt, response_format="json"))
+    return _sanitize_llm(gl.nondet.exec_prompt(prompt, response_format="json"), facts["desc"])
 
 
 def _observe(ats: str, board: str, job_id: str, code: str, now: int) -> dict:
@@ -410,6 +469,12 @@ def _observe(ats: str, board: str, job_id: str, code: str, now: int) -> dict:
     status = int(getattr(resp, "status", getattr(resp, "status_code", 0)))
     facts = _parse_source(ats, job_id, status, resp.body, now)
     facts["code_present"] = bool(code) and code.lower() in facts["desc"].lower()
+    # Fingerprint of the decision-relevant source content. Validators must have
+    # fetched the same version of the posting, or no verdict is recorded.
+    facts["content_sha256"] = hashlib.sha256(json.dumps(
+        [facts["live"], facts["title"], facts["locations"], facts["pay"], _norm_text(facts["desc"])],
+        sort_keys=True,
+    ).encode()).hexdigest()
     facts["jurisdictions"] = []
     facts["text_pay"] = None
     if facts["live"]:
@@ -448,27 +513,21 @@ def _flags(facts: dict, now: int) -> str:
     return ",".join(out)
 
 
-def _pay_close(a, b) -> bool:
-    if a is None or b is None:
-        return a is None and b is None
-    if a["currency"] != b["currency"] or a["interval"] != b["interval"]:
-        return False
-    for k in ("min", "max"):
-        hi = max(a[k], b[k])
-        if abs(a[k] - b[k]) * 10000 > hi * PAY_TOLERANCE_BPS:
-            return False
-    return True
+def _pay_terms(tp) -> tuple:
+    return None if tp is None else (tp["min"], tp["max"], tp["currency"], tp["interval"])
 
 
 def _facts_agree(leader: dict, mine: dict) -> bool:
-    for k in ("http", "live", "title", "locations", "remote", "pay", "posted_ts", "code_present"):
+    keys = ("http", "live", "title", "locations", "remote", "pay", "posted_ts", "code_present", "content_sha256")
+    for k in keys:
         if leader.get(k) != mine.get(k):
             return False
     if not leader["live"]:
         return True
     if _covered(leader) != _covered(mine):
         return False
-    if not leader["pay"] and not _pay_close(leader.get("text_pay"), mine.get("text_pay")):
+    # Prose pay is quote-verified and re-parsed by code, so validators must match exactly.
+    if not leader["pay"] and _pay_terms(leader.get("text_pay")) != _pay_terms(mine.get("text_pay")):
         return False
     return _verdict(leader) == _verdict(mine)
 
@@ -488,15 +547,30 @@ class RealRole(gl.Contract):
     applicants: TreeMap[str, DynArray[Address]]
     applicant_receipts: TreeMap[str, str]
     cooldown_s: u32
+    day_s: u32
     payouts: DynArray[Payout]
+    owed: TreeMap[Address, u256]
+    withdrawals: DynArray[Withdrawal]
+    total_owed: u256
+    total_locked: u256
+    total_burned: u256
 
-    def __init__(self, cooldown_s: int):
+    def __init__(self, cooldown_s: int, day_s: int):
         if cooldown_s < 60 or cooldown_s > 86400:
             raise gl.vm.UserError("INVALID_COOLDOWN")
+        if day_s < 60 or day_s > 86400:
+            raise gl.vm.UserError("INVALID_DAY_LENGTH")
         self.pledge_count = u32(0)
         self.cooldown_s = u32(cooldown_s)
+        self.day_s = u32(day_s)
+        self.total_owed = u256(0)
+        self.total_locked = u256(0)
+        self.total_burned = u256(0)
 
     # ------------------------------------------------------------ internals
+
+    def _days(self, n: int) -> int:
+        return n * int(self.day_s)
 
     def _consensus_observe(self, ats: str, board: str, job_id: str, code: str) -> dict:
         now = _now()
@@ -517,13 +591,47 @@ class RealRole(gl.Contract):
 
         return gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
 
-    def _pay(self, pledge_id: int, addr: Address, amount: int, reason: str) -> None:
+    def _consensus_availability(self, ats: str, board: str, job_id: str) -> dict:
+        """Validators independently probe the source; all must classify it the same way."""
+
+        def probe():
+            try:
+                resp = gl.nondet.web.get(_api_url(ats, board, job_id))
+                status = int(getattr(resp, "status", getattr(resp, "status_code", 0)))
+            except Exception:
+                status = 0
+            if status in (200, 404, 410):
+                return {"reachable": True, "status_class": "ANSWERED"}
+            return {"reachable": False, "status_class": "NO_RESPONSE" if status == 0 else f"HTTP_{status // 100}XX"}
+
+        def validator_fn(leader_res) -> bool:
+            if not isinstance(leader_res, gl.vm.Return):
+                return False
+            return probe() == leader_res.calldata
+
+        return gl.vm.run_nondet_unsafe(probe, validator_fn)
+
+    def _credit(self, pledge_id: int, addr: Address, amount: int, reason: str) -> None:
+        """Pull payments: record what is owed; the recipient calls withdraw()."""
         if amount <= 0:
             return
+        self.owed[addr] = u256(int(self.owed.get(addr, u256(0))) + amount)
+        self.total_owed = u256(int(self.total_owed) + amount)
         self.payouts.append(Payout(
-            pledge_id=u32(pledge_id), to=addr, amount=u256(amount), reason=reason, ts=u64(_now()),
+            pledge_id=u32(pledge_id), to=addr, amount=u256(amount), reason=reason,
+            ts=u64(_now()), status="CREDITED",
         ))
-        _Payee(addr).emit_transfer(value=u256(amount))
+
+    def _burn(self, pledge_id: int, amount: int, reason: str) -> None:
+        if amount <= 0:
+            return
+        burn = Address(BURN_ADDRESS)
+        self.total_burned = u256(int(self.total_burned) + amount)
+        self.payouts.append(Payout(
+            pledge_id=u32(pledge_id), to=burn, amount=u256(amount), reason=reason,
+            ts=u64(_now()), status="BURNED",
+        ))
+        _Payee(burn).emit_transfer(value=u256(amount))
 
     def _bump(self, board_key: str, bucket: str, delta: int) -> None:
         k = f"{board_key}|{bucket}"
@@ -572,33 +680,58 @@ class RealRole(gl.Contract):
         self.posting_audits.get_or_insert_default(key).append(u32(len(self.audits) - 1))
         return p
 
-    def _settle(self, pledge: Pledge, kept: bool, outcome: str) -> None:
+    def _release_stakes(self, pledge: Pledge, reason: str) -> None:
+        """Applicant stakes are always returned; they only exist to price spam."""
+        people = self.applicants.get(str(int(pledge.id)))
+        if people is None:
+            return
+        stake = int(pledge.applicant_stake)
+        for addr in people:
+            self._credit(int(pledge.id), addr, stake, reason)
+
+    def _evidence(self, pledge: Pledge, kind: str, data: dict) -> None:
+        log = json.loads(pledge.evidence_json or "[]")
+        log.append({"kind": kind, "ts": _now(), **data})
+        pledge.evidence_json = json.dumps(log[-20:], sort_keys=True)
+
+    def _settle(self, pledge: Pledge, status: str, outcome: str) -> None:
         now = _now()
         p = self.postings[pledge.posting_key]
         board_key = f"{p.ats}:{p.board}"
-        pledge.status = "KEPT" if kept else "BROKEN"
+        pid = int(pledge.id)
+        bond = int(pledge.bond)
+        pledge.status = status
         pledge.outcome = outcome
         pledge.settled_ts = u64(now)
         p.pledge_id = u32(0)
-        bond = int(pledge.bond)
-        pid = int(pledge.id)
-        if kept:
-            self._bump(board_key, "PLEDGES_KEPT", 1)
-            self._pay(pid, pledge.employer, bond, "BOND_RETURNED")
+        people = self.applicants.get(str(pid))
+        stakes = int(pledge.applicant_stake) * (len(people) if people is not None else 0)
+        self.total_locked = u256(int(self.total_locked) - bond - stakes)
+        self._release_stakes(pledge, "STAKE_RETURNED")
+
+        if status in ("KEPT", "UNVERIFIABLE"):
+            if status == "KEPT":
+                self._bump(board_key, "PLEDGES_KEPT", 1)
+            self._credit(pid, pledge.employer, bond, "BOND_RETURNED" if status == "KEPT" else "BOND_RECLAIMED")
             return
+
+        # BROKEN: capped applicant pool, enforcer reward, and the rest is burned.
         self._bump(board_key, "PLEDGES_BROKEN", 1)
         enforcer = gl.message.sender_address
         pledge.enforcer = enforcer.as_hex
-        people = self.applicants.get(str(int(pledge.id)))
+        paid = 0
+        if enforcer != pledge.employer:
+            cut = bond * ENFORCER_BPS // 10000
+            self._credit(pid, enforcer, cut, "ENFORCER_REWARD")
+            paid += cut
         n = len(people) if people is not None else 0
-        if n == 0:
-            self._pay(pid, enforcer, bond, "ENFORCER_REWARD")
-            return
-        enforcer_cut = bond * ENFORCER_BPS // 10000
-        share = (bond - enforcer_cut) // n
-        for addr in people:
-            self._pay(pid, addr, share, "APPLICANT_COMPENSATION")
-        self._pay(pid, enforcer, bond - share * n, "ENFORCER_REWARD")
+        if n:
+            pool = bond * APPLICANT_POOL_BPS // 10000
+            share = min(pool // n, bond * APPLICANT_MAX_BPS // 10000)
+            for addr in people:
+                self._credit(pid, addr, share, "APPLICANT_COMPENSATION")
+            paid += share * n
+        self._burn(pid, bond - paid, "BURNED")
 
     # ------------------------------------------------------- layer 1: audit
 
@@ -628,12 +761,16 @@ class RealRole(gl.Contract):
         self.pledge_count = u32(pid)
         sender = gl.message.sender_address
         code = f"realrole-{pid}-{sender.as_hex[2:10].lower()}"
+        self.total_locked = u256(int(self.total_locked) + bond)
         self.pledges[u32(pid)] = Pledge(
             id=u32(pid), posting_key=key, employer=sender, bond=u256(bond),
             window_days=u32(window_days), code=code, status="PENDING_PROOF",
             created_ts=u64(_now()), activated_ts=u64(0), deadline_ts=u64(0),
             filled_ts=u64(0), last_check_ts=u64(0), settled_ts=u64(0),
             outcome="", enforcer="", applicant_count=u32(0),
+            applicant_stake=u256(max(MIN_APPLICANT_STAKE, bond // APPLICANT_STAKE_DIV)),
+            last_live_ts=u64(0), closed_seen_ts=u64(0), unavailable_count=u32(0),
+            unavailable_first_ts=u64(0), unavailable_last_ts=u64(0), evidence_json="[]",
         )
         return pid
 
@@ -642,10 +779,7 @@ class RealRole(gl.Contract):
         pledge = self._pledge(pledge_id)
         if pledge.status != "PENDING_PROOF":
             raise gl.vm.UserError("NOT_PENDING")
-        parts = pledge.posting_key.split(":", 2)
-        ats = parts[0]
-        board, job_id = (parts[1], parts[2]) if ats != "jsonld" else ("", pledge.posting_key[7:])
-        ats, board, job_id, key = _canonical(ats, board, job_id)
+        ats, board, job_id, key = self._pledge_source(pledge)
         existing = self.postings.get(key)
         if existing is not None and int(existing.pledge_id) != 0:
             raise gl.vm.UserError("POSTING_ALREADY_PLEDGED")
@@ -660,8 +794,10 @@ class RealRole(gl.Contract):
         now = _now()
         pledge.status = "ACTIVE"
         pledge.activated_ts = u64(now)
-        pledge.deadline_ts = u64(now + int(pledge.window_days) * DAY_S)
+        pledge.deadline_ts = u64(now + self._days(int(pledge.window_days)))
         pledge.last_check_ts = u64(now)
+        pledge.last_live_ts = u64(now)
+        self._evidence(pledge, "ACTIVATED", {"content_sha256": facts["content_sha256"], "verdict": posting.verdict})
         posting.pledge_id = pledge.id
         return "ACTIVE"
 
@@ -674,39 +810,51 @@ class RealRole(gl.Contract):
             raise gl.vm.UserError("ONLY_EMPLOYER")
         pledge.status = "WITHDRAWN"
         pledge.settled_ts = u64(_now())
-        self._pay(int(pledge.id), pledge.employer, int(pledge.bond), "BOND_WITHDRAWN")
+        self.total_locked = u256(int(self.total_locked) - int(pledge.bond))
+        self._credit(int(pledge.id), pledge.employer, int(pledge.bond), "BOND_WITHDRAWN")
 
-    @gl.public.write
+    @gl.public.write.payable
     def register_applicant(self, pledge_id: int, receipt_hash: str) -> None:
         pledge = self._pledge(pledge_id)
-        if pledge.status != "ACTIVE":
+        if pledge.status not in ("ACTIVE", "FILLED_PENDING_CLOSE"):
             raise gl.vm.UserError("NOT_ACTIVE")
+        if _now() > int(pledge.deadline_ts):
+            raise gl.vm.UserError("REGISTRATION_CLOSED")
         sender = gl.message.sender_address
         if sender == pledge.employer:
             raise gl.vm.UserError("EMPLOYER_CANNOT_APPLY")
+        if int(gl.message.value) != int(pledge.applicant_stake):
+            raise gl.vm.UserError("WRONG_STAKE")
         h = receipt_hash.strip().lower()
         if h.startswith("0x"):
             h = h[2:]
         if not HEX64_RE.match(h):
             raise gl.vm.UserError("INVALID_RECEIPT_HASH")
+        if f"receipt:{int(pledge.id)}:{h}" in self.applicant_receipts:
+            raise gl.vm.UserError("RECEIPT_ALREADY_USED")
         rkey = f"{int(pledge.id)}:{sender.as_hex.lower()}"
         if rkey in self.applicant_receipts:
             raise gl.vm.UserError("ALREADY_REGISTERED")
         if int(pledge.applicant_count) >= MAX_APPLICANTS:
             raise gl.vm.UserError("APPLICANT_CAP_REACHED")
         self.applicant_receipts[rkey] = h
+        self.applicant_receipts[f"receipt:{int(pledge.id)}:{h}"] = sender.as_hex
         self.applicants.get_or_insert_default(str(int(pledge.id))).append(sender)
         pledge.applicant_count = u32(int(pledge.applicant_count) + 1)
+        self.total_locked = u256(int(self.total_locked) + int(pledge.applicant_stake))
 
     @gl.public.write
     def mark_filled(self, pledge_id: int) -> None:
+        """An unverified 'we hired' can only tighten the commitment, never loosen it."""
         pledge = self._pledge(pledge_id)
         if pledge.status != "ACTIVE":
             raise gl.vm.UserError("NOT_ACTIVE")
         if gl.message.sender_address != pledge.employer:
             raise gl.vm.UserError("ONLY_EMPLOYER")
+        now = _now()
         pledge.status = "FILLED_PENDING_CLOSE"
-        pledge.filled_ts = u64(_now())
+        pledge.filled_ts = u64(now)
+        pledge.deadline_ts = u64(min(int(pledge.deadline_ts), now + self._days(CLOSE_GRACE_DAYS)))
 
     @gl.public.write
     def check_pledge(self, pledge_id: int) -> str:
@@ -716,42 +864,102 @@ class RealRole(gl.Contract):
         now = _now()
         if now - int(pledge.last_check_ts) < int(self.cooldown_s):
             raise gl.vm.UserError("RECENTLY_CHECKED")
-        p = self.postings[pledge.posting_key]
-        facts = self._consensus_observe(p.ats, p.board, p.job_id, "")
-        posting = self._record(p.ats, p.board, p.job_id, p.key, facts, "pledge_check")
+        ats, board, job_id, key = self._pledge_source(pledge)
+        facts = self._consensus_observe(ats, board, job_id, "")
+        posting = self._record(ats, board, job_id, key, facts, "pledge_check")
         pledge.last_check_ts = u64(now)
+        # Any successful observation proves the source answers: reset outage evidence.
+        pledge.unavailable_count = u32(0)
+        pledge.unavailable_first_ts = u64(0)
+        pledge.unavailable_last_ts = u64(0)
+        deadline = int(pledge.deadline_ts)
+        self._evidence(pledge, "CHECK", {
+            "live": facts["live"], "verdict": posting.verdict, "content_sha256": facts["content_sha256"],
+            "deadline": deadline,
+        })
 
         if not facts["live"]:
-            outcome = "CLOSED_AFTER_FILL" if pledge.status == "FILLED_PENDING_CLOSE" else "CLOSED_IN_WINDOW"
-            self._settle(pledge, True, outcome)
-            return outcome
+            pledge.closed_seen_ts = u64(now)
+            if now <= deadline:
+                self._settle(pledge, "KEPT", "CLOSURE_PROVEN_BEFORE_DEADLINE")
+            else:
+                # Closed now, but nothing on chain proves it closed in time.
+                self._settle(pledge, "BROKEN", "CLOSURE_NOT_PROVEN_BY_DEADLINE")
+            return pledge.outcome
+        pledge.last_live_ts = u64(now)
         if posting.verdict != "COMPLIANT":
-            self._settle(pledge, False, "PAY_TERMS_BROKEN_" + posting.verdict)
+            self._settle(pledge, "BROKEN", "PAY_TERMS_BROKEN_" + posting.verdict)
             return pledge.outcome
-        if pledge.status == "FILLED_PENDING_CLOSE" and now > int(pledge.filled_ts) + CLOSE_GRACE_DAYS * DAY_S:
-            self._settle(pledge, False, "ZOMBIE_AFTER_FILL")
-            return pledge.outcome
-        if pledge.status == "ACTIVE" and now > int(pledge.deadline_ts):
-            self._settle(pledge, False, "LINGERED_PAST_DEADLINE")
+        if now > deadline:
+            outcome = "OPEN_AFTER_FILLED_DEADLINE" if pledge.status == "FILLED_PENDING_CLOSE" else "LINGERED_PAST_DEADLINE"
+            self._settle(pledge, "BROKEN", outcome)
             return pledge.outcome
         return "STILL_HONEST"
 
     @gl.public.write
-    def reclaim_unverifiable(self, pledge_id: int) -> None:
+    def attest_unavailable(self, pledge_id: int) -> str:
+        """Anyone may record consensus evidence that a pledge's source cannot be reached."""
+        pledge = self._pledge(pledge_id)
+        if pledge.status not in ("ACTIVE", "FILLED_PENDING_CLOSE"):
+            raise gl.vm.UserError("NOT_CHECKABLE")
+        now = _now()
+        if now <= int(pledge.deadline_ts):
+            raise gl.vm.UserError("BEFORE_DEADLINE")
+        if now - int(pledge.unavailable_last_ts) < int(self.cooldown_s):
+            raise gl.vm.UserError("RECENTLY_ATTESTED")
+        ats, board, job_id, _ = self._pledge_source(pledge)
+        probe = self._consensus_availability(ats, board, job_id)
+        if probe["reachable"]:
+            raise gl.vm.UserError("SOURCE_REACHABLE_USE_CHECK")
+        if int(pledge.unavailable_count) == 0:
+            pledge.unavailable_first_ts = u64(now)
+        pledge.unavailable_count = u32(int(pledge.unavailable_count) + 1)
+        pledge.unavailable_last_ts = u64(now)
+        self._evidence(pledge, "UNAVAILABLE", {"status_class": probe["status_class"]})
+        return probe["status_class"]
+
+    @gl.public.write
+    def reclaim_unverifiable(self, pledge_id: int) -> str:
+        """Settle a pledge whose source has stayed unreachable, on evidence only."""
         pledge = self._pledge(pledge_id)
         if pledge.status not in ("ACTIVE", "FILLED_PENDING_CLOSE"):
             raise gl.vm.UserError("NOT_RECLAIMABLE")
-        if gl.message.sender_address != pledge.employer:
-            raise gl.vm.UserError("ONLY_EMPLOYER")
-        now = _now()
-        limit = RECLAIM_AFTER_DAYS * DAY_S
-        if now < int(pledge.deadline_ts) + limit or now < int(pledge.last_check_ts) + limit:
-            raise gl.vm.UserError("TOO_EARLY")
-        pledge.status = "UNVERIFIABLE"
-        pledge.outcome = "NO_SUCCESSFUL_CHECK"
-        pledge.settled_ts = u64(now)
-        self.postings[pledge.posting_key].pledge_id = u32(0)
-        self._pay(int(pledge.id), pledge.employer, int(pledge.bond), "BOND_RECLAIMED")
+        if int(pledge.unavailable_count) < UNAVAILABLE_ATTESTATIONS:
+            raise gl.vm.UserError("NOT_ENOUGH_EVIDENCE")
+        span = int(pledge.unavailable_last_ts) - int(pledge.unavailable_first_ts)
+        if span < self._days(UNAVAILABLE_SPAN_DAYS):
+            raise gl.vm.UserError("EVIDENCE_SPAN_TOO_SHORT")
+        if int(pledge.unavailable_first_ts) <= int(pledge.deadline_ts):
+            raise gl.vm.UserError("EVIDENCE_BEFORE_DEADLINE")
+        ats = pledge.posting_key.split(":", 1)[0]
+        if ats in THIRD_PARTY_SOURCES:
+            # The employer cannot make Greenhouse, Lever or Ashby fail: refund.
+            self._settle(pledge, "UNVERIFIABLE", "THIRD_PARTY_SOURCE_UNAVAILABLE")
+        else:
+            # A self-hosted careers page going dark is the employer's responsibility.
+            self._settle(pledge, "BROKEN", "SELF_HOSTED_SOURCE_UNAVAILABLE")
+        return pledge.outcome
+
+    @gl.public.write
+    def withdraw(self) -> int:
+        """Pull your credited GEN. Balance is zeroed before the transfer is emitted."""
+        sender = gl.message.sender_address
+        amount = int(self.owed.get(sender, u256(0)))
+        if amount <= 0:
+            raise gl.vm.UserError("NOTHING_OWED")
+        self.owed[sender] = u256(0)
+        self.total_owed = u256(int(self.total_owed) - amount)
+        self.withdrawals.append(Withdrawal(to=sender, amount=u256(amount), ts=u64(_now())))
+        _Payee(sender).emit_transfer(value=u256(amount))
+        return amount
+
+    def _pledge_source(self, pledge: Pledge) -> tuple:
+        key = pledge.posting_key
+        ats = key.split(":", 1)[0]
+        if ats == "jsonld":
+            return _canonical("jsonld", "", key[len("jsonld:"):])
+        _, board, job_id = key.split(":", 2)
+        return _canonical(ats, board, job_id)
 
     def _pledge(self, pledge_id: int) -> Pledge:
         pledge = self.pledges.get(u32(pledge_id))
@@ -812,9 +1020,29 @@ class RealRole(gl.Contract):
     def get_payouts(self, pledge_id: int) -> list:
         return [
             {"pledge_id": int(x.pledge_id), "to": x.to.as_hex, "amount": str(int(x.amount)),
-             "reason": x.reason, "ts": int(x.ts)}
+             "reason": x.reason, "ts": int(x.ts), "status": x.status}
             for x in self.payouts if int(x.pledge_id) == pledge_id
         ]
+
+    @gl.public.view
+    def get_owed(self, address: str) -> str:
+        return str(int(self.owed.get(Address(address), u256(0))))
+
+    @gl.public.view
+    def get_withdrawals(self, address: str) -> list:
+        a = Address(address)
+        return [{"amount": str(int(w.amount)), "ts": int(w.ts)} for w in self.withdrawals if w.to == a]
+
+    @gl.public.view
+    def get_accounting(self) -> dict:
+        """Solvency: the contract must always hold at least what it owes plus what is locked."""
+        balance = int(self.balance)
+        liabilities = int(self.total_owed) + int(self.total_locked)
+        return {
+            "balance": str(balance), "owed": str(int(self.total_owed)),
+            "locked": str(int(self.total_locked)), "burned": str(int(self.total_burned)),
+            "solvent": balance >= liabilities,
+        }
 
     @gl.public.view
     def is_applicant(self, pledge_id: int, address: str) -> bool:
@@ -828,6 +1056,7 @@ class RealRole(gl.Contract):
             "boards": len(self.boards),
             "pledges": int(self.pledge_count),
             "cooldown_s": int(self.cooldown_s),
+            "day_s": int(self.day_s),
         }
 
 
@@ -856,5 +1085,8 @@ def _pledge_view(x: Pledge) -> dict:
         "activated_ts": int(x.activated_ts), "deadline_ts": int(x.deadline_ts),
         "filled_ts": int(x.filled_ts), "last_check_ts": int(x.last_check_ts),
         "settled_ts": int(x.settled_ts), "outcome": x.outcome, "enforcer": x.enforcer,
-        "applicant_count": int(x.applicant_count),
+        "applicant_count": int(x.applicant_count), "applicant_stake": str(int(x.applicant_stake)),
+        "last_live_ts": int(x.last_live_ts), "closed_seen_ts": int(x.closed_seen_ts),
+        "unavailable_count": int(x.unavailable_count), "unavailable_first_ts": int(x.unavailable_first_ts),
+        "unavailable_last_ts": int(x.unavailable_last_ts), "evidence": x.evidence_json,
     }

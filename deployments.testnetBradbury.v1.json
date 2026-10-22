@@ -1,0 +1,8 @@
+{
+  "chain": "testnetBradbury",
+  "chainId": 4221,
+  "address": "0xB3b7F0B04ff28f19561FC6906965101120Fa980A",
+  "deployTx": "0xca8e779bdb80e5a4c77ec0ed5541788f1e693bae83c79d79154b4ff4481123be",
+  "cooldown": 21600,
+  "deployedAt": "2026-10-11T17:23:35.779Z"
+}

@@ -1,4 +1,5 @@
 import { createClient } from "genlayer-js";
+import "../genlayer/gasMargin";
 import { CHAIN } from "../genlayer/client";
 import { estimateWriteFeePreset, feePresetToTransactionFees } from "../genlayer/fees";
 
